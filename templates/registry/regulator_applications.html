@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Facility applications{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Facility applications</h1>
+  <p>Licence renewals and services update requests</p>
+</div>
+
+<form class="row g-2 mb-4" method="get">
+  <div class="col-md-4">
+    <select name="status" class="form-select">
+      <option value="">All statuses</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-outline-primary w-100">Filter</button></div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th>Facility</th><th>Type</th><th>Submitted</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for app in applications %}
+          <tr>
+            <td>{{ app.facility_legal_name }}<br><code class="small">{{ app.registration_number }}</code></td>
+            <td>{{ app.get_application_type_display }}</td>
+            <td>{{ app.created_at|date:"d M Y" }}</td>
+            <td><span class="badge bg-{{ app.status_color }}">{{ app.get_status_display }}</span></td>
+            <td class="text-end">
+              <a href="{% url 'regulator_application_review' app.pk %}" class="btn btn-sm btn-primary">Review</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-muted text-center py-4">No applications found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

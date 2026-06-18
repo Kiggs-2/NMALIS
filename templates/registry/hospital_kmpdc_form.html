@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ form_title }}</h1>
+  <p class="text-muted">{{ form_subtitle }}</p>
+</div>
+
+<div class="card shadow-sm kmpdc-form-card">
+  <div class="card-header bg-primary text-white">
+    <strong>KMPDC — Official submission form</strong>
+  </div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" class="kmpdc-form">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label">{{ form.facility_legal_name.label }}</label>
+          {{ form.facility_legal_name }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">{{ form.registration_number.label }}</label>
+          {{ form.registration_number }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">{{ form.county.label }}</label>
+          {{ form.county }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">{{ form.telephone.label }}</label>
+          {{ form.telephone }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">{{ form.email.label }}</label>
+          {{ form.email }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">{{ form.physical_address.label }}</label>
+          {{ form.physical_address }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">{{ form.postal_address.label }}</label>
+          {{ form.postal_address }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">{{ form.director_name.label }}</label>
+          {{ form.director_name }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">{{ form.bed_capacity.label }}</label>
+          {{ form.bed_capacity }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">{{ form.accreditation_sought_until.label }}</label>
+          {{ form.accreditation_sought_until }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">{{ form.services_requested.label }}</label>
+          {{ form.services_requested }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Supporting documents (PDF)</label>
+          {{ form.supporting_file }}
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            {{ form.declaration_agreed }}
+            <label class="form-check-label" for="{{ form.declaration_agreed.id_for_label }}">
+              {{ form.declaration_agreed.label }}
+            </label>
+          </div>
+          {% if form.declaration_agreed.errors %}
+            <div class="text-danger small">{{ form.declaration_agreed.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-3">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">Submit application</button>
+        <a href="{% url back_url %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

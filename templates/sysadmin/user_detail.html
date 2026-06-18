@@ -1,0 +1,68 @@
+{% extends "sysadmin/base_sysadmin.html" %}
+{% block title %}{{ target_user.username }}{% endblock %}
+{% block page_title %}User: {{ target_user.username }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'sysadmin_user_edit' target_user.pk %}" class="btn btn-primary">Edit user</a>
+  <a href="{% url 'sysadmin_user_reset_password' target_user.pk %}" class="btn btn-warning">Reset password</a>
+  <a href="{% url 'sysadmin_user_list' %}" class="btn btn-outline-secondary">Back to list</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card mb-4">
+      <div class="card-header"><strong>Account details</strong></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-4">Username</dt><dd class="col-8">{{ target_user.username }}</dd>
+          <dt class="col-4">Full name</dt><dd class="col-8">{{ target_user.get_full_name|default:"—" }}</dd>
+          <dt class="col-4">Email</dt><dd class="col-8">{{ target_user.email|default:"—" }}</dd>
+          <dt class="col-4">Role</dt><dd class="col-8"><span class="badge bg-secondary">{{ target_user.get_role_display }}</span></dd>
+          <dt class="col-4">Active</dt><dd class="col-8">{% if target_user.is_active %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</dd>
+          <dt class="col-4">Facility</dt><dd class="col-8">{{ target_user.facility|default:"—" }}</dd>
+          <dt class="col-4">Practitioner</dt><dd class="col-8">{{ target_user.practitioner_profile|default:"—" }}</dd>
+          <dt class="col-4">Joined</dt><dd class="col-8">{{ target_user.date_joined|date:"d M Y, H:i" }}</dd>
+          <dt class="col-4">Last login</dt><dd class="col-8">{{ target_user.last_login|date:"d M Y, H:i"|default:"Never" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header"><strong>Support tickets ({{ tickets|length }})</strong></div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>#</th><th>Subject</th><th>Status</th><th>Created</th></tr></thead>
+          <tbody>
+            {% for t in tickets %}
+              <tr>
+                <td><a href="{% url 'sysadmin_ticket_detail' t.pk %}">{{ t.pk }}</a></td>
+                <td>{{ t.subject|truncatewords:8 }}</td>
+                <td><span class="badge bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
+                <td class="small text-muted">{{ t.created_at|date:"d M Y" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="text-muted text-center">No tickets.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><strong>Recent alerts</strong></div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush small">
+          {% for alert in alerts %}
+            <li class="list-group-item px-0">
+              <strong>{{ alert.title }}</strong>
+              <span class="text-muted d-block">{{ alert.message|truncatewords:20 }} — {{ alert.created_at|date:"d M Y" }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item px-0 text-muted">No alerts.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

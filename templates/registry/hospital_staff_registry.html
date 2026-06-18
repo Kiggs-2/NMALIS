@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Staff registry{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>Staff registry</h1>
+    <p>{{ facility.name }} — active employees on the national registry</p>
+  </div>
+  <a href="{% url 'verify_doctor' %}" class="btn btn-primary">Verify a doctor</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>License</th>
+          <th>Specialty</th>
+          <th>Role at facility</th>
+          <th>Status</th>
+          <th>Start date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for aff in staff %}
+          <tr>
+            <td>{{ aff.practitioner.full_name }}</td>
+            <td><code>{{ aff.practitioner.license_number }}</code></td>
+            <td>{{ aff.practitioner.specialty|default:"—" }}</td>
+            <td>{{ aff.role_at_facility|default:"—" }}</td>
+            <td><span class="badge bg-{{ aff.practitioner.status_color }}">{{ aff.practitioner.get_status_display }}</span></td>
+            <td>{{ aff.start_date }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-muted text-center py-4">No staff on record.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load registry_extras %}
+{% block title %}Regulator — {{ entity|title }}s{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1>Manage {{ entity|title }}</h1>
+    <p>Open a record to review <strong>all submitted documents</strong> in one dossier</p>
+  </div>
+</div>
+
+<form class="row g-2 mb-4" method="get">
+  <div class="col-md-8">
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search by name or number">
+  </div>
+  <div class="col-md-4">
+    <button class="btn btn-outline-primary w-100">Search</button>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-striped align-middle mb-0">
+      <thead>
+        <tr>
+          {% if entity == 'practitioner' %}
+            <th>License</th><th>Name</th><th>Documents</th><th>Status</th><th>Expiry</th><th></th>
+          {% else %}
+            <th>Reg. No</th><th>Name</th><th>Documents</th><th>Status</th><th>Accreditation</th><th></th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            {% if entity == 'practitioner' %}
+              <td><code>{{ item.license_number }}</code></td>
+              <td>{{ item.full_name }}</td>
+              <td>
+                <span class="badge bg-light text-dark border">{{ item.document_count }} file{{ item.document_count|pluralize }}</span>
+                {% if item.pending_document_count %}
+                  <span class="badge bg-warning text-dark">{{ item.pending_document_count }} pending</span>
+                {% endif %}
+              </td>
+              <td><span class="badge bg-{{ item.status_color }}">{{ item.get_status_display }}</span></td>
+              <td>{{ item.license_expiry }}</td>
+              <td class="text-end">
+                <a href="{% url 'regulator_practitioner_detail' item.pk %}" class="btn btn-sm btn-primary">Open dossier</a>
+              </td>
+            {% else %}
+              <td><code>{{ item.registration_number }}</code></td>
+              <td>{{ item.name }}</td>
+              <td>
+                <span class="badge bg-light text-dark border">{{ item.document_count }} file{{ item.document_count|pluralize }}</span>
+                {% if item.pending_document_count %}
+                  <span class="badge bg-warning text-dark">{{ item.pending_document_count }} pending</span>
+                {% endif %}
+              </td>
+              <td><span class="badge bg-{{ item.status_color }}">{{ item.get_status_display }}</span></td>
+              <td>{{ item.accreditation_expiry }}</td>
+              <td class="text-end">
+                <a href="{% url 'regulator_facility_detail' item.pk %}" class="btn btn-sm btn-primary">Open dossier</a>
+              </td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="text-muted text-center py-4">No records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

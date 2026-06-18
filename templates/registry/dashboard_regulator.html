@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Regulator Dashboard{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>KMPDC Authority Control</h1>
+    <p>National compliance overview and enforcement</p>
+  </div>
+  <a href="{% url 'compliance_analytics' %}" class="btn btn-primary btn-lg">Compliance analytics</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-primary"><div class="card-body"><div class="stat-value text-primary">{{ pending_documents }}</div><div class="stat-label"><a href="{% url 'regulator_documents' %}" class="text-decoration-none">Documents pending</a></div></div></div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card"><div class="card-body"><div class="stat-value">{{ practitioner_count }}</div><div class="stat-label">Practitioners</div></div></div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card"><div class="card-body"><div class="stat-value">{{ facility_count }}</div><div class="stat-label">Facilities</div></div></div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-warning"><div class="card-body"><div class="stat-value text-warning">{{ suspended_practitioners }}</div><div class="stat-label">Suspended / Revoked</div></div></div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-danger"><div class="card-body"><div class="stat-value text-danger">{{ non_compliant_facilities }}</div><div class="stat-label">Non-active facilities</div></div></div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Practitioner status breakdown</h2>
+        <div class="scrollable-section">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Status</th><th class="text-end">Count</th></tr></thead>
+            <tbody>
+              {% for row in status_breakdown %}
+                <tr>
+                  <td><span class="badge bg-{{ row.color }}">{{ row.label }}</span></td>
+                  <td class="text-end">{{ row.c }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="2" class="text-muted">No data</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+  <div class="card shadow-sm h-100 mb-4 mb-lg-0">
+    <div class="card-body d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">Documents awaiting review</h2>
+        <a href="{% url 'regulator_documents' %}" class="btn btn-sm btn-primary">Open registry</a>
+      </div>
+      <div class="scrollable-section flex-grow-1" style="max-height: 260px; overflow-y: auto;">
+        <ul class="list-group list-group-flush small">
+          {% for doc in recent_documents %}
+            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+              <!-- text-truncate container prevents long titles from breaking the flexbox layout -->
+              <div class="me-3 text-truncate">
+                <strong class="small d-block text-truncate" title="{{ doc.subject_label }}">{{ doc.subject_label }}</strong>
+                <span class="text-muted small d-block text-truncate" title="{{ doc.get_document_type_display }}">{{ doc.get_document_type_display }}</span>
+                <code class="small text-muted">{{ doc.reference_number|truncatechars:20 }}</code>
+              </div>
+              
+              <div class="flex-shrink-0">
+                {% if doc.practitioner_id %}
+                  <a href="{% url 'regulator_practitioner_detail' doc.practitioner_id %}" class="btn btn-sm btn-outline-primary">Review</a>
+                {% elif doc.facility_id %}
+                  <a href="{% url 'regulator_facility_detail' doc.facility_id %}" class="btn btn-sm btn-outline-primary">Review</a>
+                {% else %}
+                  <!-- Fallback generic details page if specific IDs don't exist -->
+                  <a href="{% url 'regulator_documents' %}" class="btn btn-sm btn-outline-secondary">View</a>
+                {% endif %}
+              </div>
+            </li>
+          {% empty %}
+            <li class="list-group-item px-0 text-muted text-center py-3">No pending documents.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-lg-12">
+    <div class="card shadow-sm">
+      <div class="card-body d-flex flex-column">
+        <h2 class="h5 mb-3">Recent status changes</h2>
+        <div class="scrollable-section flex-grow-1" style="max-height:360px; overflow-y:auto;">
+          <ul class="list-group list-group-flush small">
+            {% for log in recent_logs %}
+              <li class="list-group-item px-0 d-flex justify-content-between align-items-start">
+                <!-- Text Details Block -->
+                <div class="me-3 text-truncate">
+                  <div class="text-truncate" title="{{ log.entity_label }}">
+                    {% if log.entity_type == 'practitioner' %}
+                      <a href="{% url 'regulator_practitioner_detail' log.entity_id %}" class="fw-bold text-decoration-none">{{ log.entity_label }}</a>
+                    {% elif log.entity_type == 'facility' %}
+                      <a href="{% url 'regulator_facility_detail' log.entity_id %}" class="fw-bold text-decoration-none">{{ log.entity_label }}</a>
+                    {% else %}
+                      <strong>{{ log.entity_label }}</strong>
+                    {% endif %}
+                    <span class="text-muted ms-1">: {{ log.old_status|default:"—" }} &rarr; {{ log.new_status }}</span>
+                  </div>
+                  
+                  {% if log.reason %}
+                    <span class="text-muted small d-block text-truncate" title="{{ log.reason }}">{{ log.reason|truncatewords:20 }}</span>
+                  {% endif %}
+                  
+                  <span class="text-muted d-block small">{{ log.created_at|date:"d M Y, H:i" }} &middot; {{ log.changed_by|default:"System" }}</span>
+                </div>
+
+                <!-- Right Side Badge Action / Spacer -->
+                <div class="flex-shrink-0 pt-1">
+                  {% if log.accountability_confirmed %}
+                    <span class="badge bg-success">Accountability</span>
+                  {% endif %}
+                </div>
+              </li>
+            {% empty %}
+              <li class="list-group-item px-0 text-muted">No changes logged yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

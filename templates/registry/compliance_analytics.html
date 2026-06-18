@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load registry_extras %}
+{% block title %}Compliance analytics{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>Compliance analytics</h1>
+    <p>National registry intelligence for regulatory oversight</p>
+  </div>
+  <a href="{% url 'regulator_documents' %}" class="btn btn-primary">
+    Review Documents 
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ analytics.totals.practitioners }}</div><div class="stat-label">Practitioners</div></div></div></div>
+  <div class="col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ analytics.totals.facilities }}</div><div class="stat-label">Facilities</div></div></div></div>
+  <div class="col-md-3"><div class="card stat-card border-warning"><div class="card-body"><div class="stat-value text-warning">{{ analytics.totals.pending_documents }}</div><div class="stat-label">Pending documents</div></div></div></div>
+  <div class="col-md-3"><div class="card stat-card border-danger"><div class="card-body"><div class="stat-value text-danger">{{ analytics.non_compliant_practitioners }}</div><div class="stat-label">Non-active practitioners</div></div></div></div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase">Expiry risk (30 days)</h2>
+        <p class="mb-1">Practitioner licences: <strong>{{ analytics.expiring_practitioner_licences }}</strong></p>
+        <p class="mb-0">Facility accreditations: <strong>{{ analytics.expiring_facility_accreditations }}</strong></p>
+      </div>
+    </div>
+  </div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5">Practitioner standing</h2>
+        <table class="table table-sm">
+          {% for row in practitioner_rows %}
+            <tr><td><span class="badge bg-{{ row.color }}">{{ row.label }}</span></td><td class="text-end">{{ row.count }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5">Facility standing</h2>
+        <table class="table table-sm">
+          {% for row in facility_rows %}
+            <tr><td><span class="badge bg-{{ row.color }}">{{ row.label }}</span></td><td class="text-end">{{ row.count }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

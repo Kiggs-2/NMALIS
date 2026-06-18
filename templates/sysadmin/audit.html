@@ -1,0 +1,27 @@
+{% extends "sysadmin/base_sysadmin.html" %}
+{% block title %}Audit log{% endblock %}
+{% block page_title %}System audit log{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover table-sm mb-0">
+      <thead><tr><th>Entity</th><th>Type</th><th>Change</th><th>Reason</th><th>Accountability</th><th>By</th><th>When</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td>{{ log.entity_label }}</td>
+            <td><span class="badge bg-secondary">{{ log.entity_type }}</span></td>
+            <td>{{ log.old_status|default:"—" }} &rarr; {{ log.new_status }}</td>
+            <td class="small">{{ log.reason|truncatewords:15|default:"—" }}</td>
+            <td>{% if log.accountability_confirmed %}<span class="badge bg-success">Yes</span>{% else %}—{% endif %}</td>
+            <td>{{ log.changed_by|default:"System" }}</td>
+            <td class="small text-muted">{{ log.created_at|date:"d M Y, H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-muted text-center py-3">No audit entries.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

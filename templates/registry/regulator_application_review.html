@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Review application{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ application.get_application_type_display }}</h1>
+  <p>{{ application.facility_legal_name }} · <code>{{ application.registration_number }}</code></p>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">County</dt><dd class="col-sm-8">{{ application.county }}</dd>
+          <dt class="col-sm-4">Address</dt><dd class="col-sm-8">{{ application.physical_address }}</dd>
+          <dt class="col-sm-4">Director</dt><dd class="col-sm-8">{{ application.director_name }}</dd>
+          <dt class="col-sm-4">Bed capacity</dt><dd class="col-sm-8">{{ application.bed_capacity }}</dd>
+          <dt class="col-sm-4">Services requested</dt><dd class="col-sm-8">{{ application.services_requested }}</dd>
+          <dt class="col-sm-4">Accreditation until</dt><dd class="col-sm-8">{{ application.accreditation_sought_until }}</dd>
+        </dl>
+        {% if application.supporting_file %}
+          <hr>
+          <a href="{{ application.supporting_file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">View supporting file</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    {% if is_locked %}
+      <div class="card shadow-sm border-success">
+        <div class="card-header bg-success text-white"><strong>Decision finalised</strong></div>
+        <div class="card-body">
+          <p class="mb-1"><strong>Decision:</strong> {{ application.get_status_display }}</p>
+          {% if application.review_notes %}<p class="mb-1"><strong>Notes:</strong> {{ application.review_notes }}</p>{% endif %}
+          {% if application.reviewed_by %}<p class="text-muted small mb-3">Reviewed by {{ application.reviewed_by.username }} on {{ application.reviewed_at|date:"d M Y, H:i" }}</p>{% endif %}
+          <div class="alert alert-info small mb-0">This decision has been finalised and cannot be changed.</div>
+        </div>
+      </div>
+    {% else %}
+      <form method="post" class="card shadow-sm border-primary">
+        <div class="card-header bg-primary text-white"><strong>Regulator decision</strong></div>
+        <div class="card-body">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">{{ form.decision.label }}</label>
+            {{ form.decision }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.review_notes.label }}</label>
+            {{ form.review_notes }}
+          </div>
+          <p class="small text-muted">Approving a services update will automatically update the facility's services in the registry.</p>
+          <button type="submit" class="btn btn-primary w-100">Submit decision</button>
+        </div>
+      </form>
+    {% endif %}
+    <a href="{% url 'regulator_applications' %}" class="btn btn-link w-100 mt-2">Back to list</a>
+  </div>
+</div>
+{% endblock %}

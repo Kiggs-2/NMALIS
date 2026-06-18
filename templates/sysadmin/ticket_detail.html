@@ -1,0 +1,49 @@
+{% extends "sysadmin/base_sysadmin.html" %}
+{% block title %}Ticket #{{ ticket.pk }}{% endblock %}
+{% block page_title %}Ticket #{{ ticket.pk }} — {{ ticket.subject }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ ticket.subject }}</strong>
+        <span class="badge bg-{{ ticket.status_color }}">{{ ticket.get_status_display }}</span>
+      </div>
+      <div class="card-body">
+        <dl class="row small mb-3">
+          <dt class="col-3">Submitted by</dt><dd class="col-9"><a href="{% url 'sysadmin_user_detail' ticket.submitted_by.pk %}">{{ ticket.submitted_by.username }}</a></dd>
+          <dt class="col-3">Priority</dt><dd class="col-9"><span class="badge bg-{% if ticket.priority == 'high' %}danger{% elif ticket.priority == 'medium' %}warning{% else %}secondary{% endif %}">{{ ticket.get_priority_display }}</span></dd>
+          <dt class="col-3">Created</dt><dd class="col-9">{{ ticket.created_at|date:"d M Y, H:i" }}</dd>
+          <dt class="col-3">Updated</dt><dd class="col-9">{{ ticket.updated_at|date:"d M Y, H:i" }}</dd>
+          <dt class="col-3">Assigned to</dt><dd class="col-9">{{ ticket.assigned_to.username|default:"Unassigned" }}</dd>
+        </dl>
+        <hr>
+        <div>{{ ticket.description|linebreaksbr }}</div>
+        {% if ticket.admin_notes %}
+          <hr>
+          <h3 class="h6">Admin notes</h3>
+          <div class="p-2 bg-light rounded small">{{ ticket.admin_notes|linebreaksbr }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <form method="post" class="card border-primary">
+      <div class="card-header bg-primary text-white"><strong>Respond / update</strong></div>
+      <div class="card-body">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">{{ form.status.label }}</label>
+          {{ form.status }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{{ form.admin_notes.label }}</label>
+          {{ form.admin_notes }}
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Update ticket</button>
+      </div>
+    </form>
+    <a href="{% url 'sysadmin_ticket_list' %}" class="btn btn-link w-100 mt-2">Back to tickets</a>
+  </div>
+</div>
+{% endblock %}

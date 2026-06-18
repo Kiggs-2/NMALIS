@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Access denied{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <h1 class="display-6 text-danger">403 — Access denied</h1>
+  <p class="lead text-muted">Your account does not have permission to view this page.</p>
+  {% if user.is_authenticated %}
+    <a href="{% url 'dashboard' %}" class="btn btn-primary">Return to dashboard</a>
+  {% else %}
+    <a href="{% url 'home' %}" class="btn btn-primary">Return to home</a>
+  {% endif %}
+</div>
+{% endblock %}

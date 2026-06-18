@@ -1,0 +1,33 @@
+{% extends "sysadmin/base_sysadmin.html" %}
+{% block title %}Support tickets{% endblock %}
+{% block page_title %}Support tickets{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{% url 'sysadmin_ticket_list' %}" class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+  {% for value, label in status_choices %}
+    <a href="{% url 'sysadmin_ticket_list' %}?status={{ value }}" class="btn btn-sm {% if status_filter == value %}btn-primary{% else %}btn-outline-primary{% endif %}">{{ label }}</a>
+  {% endfor %}
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>#</th><th>Subject</th><th>From</th><th>Priority</th><th>Status</th><th>Assigned</th><th>Created</th></tr></thead>
+      <tbody>
+        {% for t in tickets %}
+          <tr>
+            <td><a href="{% url 'sysadmin_ticket_detail' t.pk %}">{{ t.pk }}</a></td>
+            <td>{{ t.subject|truncatewords:10 }}</td>
+            <td>{{ t.submitted_by.username }}</td>
+            <td><span class="badge bg-{% if t.priority == 'high' %}danger{% elif t.priority == 'medium' %}warning{% else %}secondary{% endif %}">{{ t.get_priority_display }}</span></td>
+            <td><span class="badge bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
+            <td>{{ t.assigned_to.username|default:"Unassigned" }}</td>
+            <td class="small text-muted">{{ t.created_at|date:"d M Y, H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-muted text-center py-3">No tickets found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load registry_extras %}
+{% block title %}Practitioner dashboard{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>Practitioner workspace</h1>
+    <p>Manage your licence, documents, and employer verification</p>
+  </div>
+  {% if profile and profile.status == 'active' %}
+    <a href="{% url 'download_practitioner_certificate' profile.pk %}" class="btn btn-primary">Download licence PDF</a>
+  {% endif %}
+</div>
+
+{% if profile %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-value text-primary">{{ profile.cpd_points }}</div><div class="stat-label">CPD points</div></div></div></div>
+  <div class="col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ profile.license_expiry|date:"d M Y" }}</div><div class="stat-label">Licence expiry</div></div></div></div>
+  <div class="col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ affiliations|length }}</div><div class="stat-label">Affiliations</div></div></div></div>
+  <div class="col-md-3"><div class="card stat-card"><div class="card-body"><span class="badge bg-{{ profile.status_color }} fs-6">{{ profile.get_status_display }}</span><div class="stat-label mt-2">Standing</div></div></div></div>
+</div>
+{% endif %}
+
+{% if alerts %}
+<div class="alert-list mb-4">
+  {% for alert in alerts %}
+    <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div><strong>{{ alert.title }}</strong><br>{{ alert.message }}</div>
+      <a href="{% url 'mark_alert_read' alert.pk %}" class="btn btn-sm btn-outline-primary">Dismiss</a>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-8">
+  {% if profile %}
+    <div class="card shadow-sm mb-4 credential-card border-{{ profile.status_color }}">
+      <div class="card-body">
+        <h2 class="h5">{{ profile.full_name }}</h2>
+        <p class="mb-0"><code>{{ profile.license_number }}</code></p>
+      </div>
+    </div>
+  {% endif %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">My affiliations</h2>
+        <ul class="list-group list-group-flush">
+          {% for aff in affiliations %}
+            <li class="list-group-item px-0 d-flex justify-content-between">
+              {{ aff.facility.name }}
+              <span class="badge bg-{{ aff.facility.status_color }}">{{ aff.facility.get_status_display }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item px-0 text-muted">No active affiliations</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body d-grid gap-2">
+        <a href="{% url 'practitioner_my_license' %}" class="btn btn-outline-primary">View full licence record</a>
+        <a href="{% url 'verify_hospital' %}" class="btn btn-primary">Hospital credibility check</a>
+        <a href="{% url 'practitioner_renewal' %}" class="btn btn-outline-secondary">Update CPD / renewal</a>
+        <a href="{% url 'practitioner_account' %}" class="btn btn-link">My account details</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

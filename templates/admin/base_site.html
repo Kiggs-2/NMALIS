@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('NMALIS Admin') }}{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('NMALIS administration') }}</a></div>
+{% if user.is_authenticated %}
+<div style="margin-top: 8px;">
+  <a href="{% url 'dashboard' %}" style="color: #fff; text-decoration: underline; font-size: 0.85rem;">&larr; Back to main dashboard</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

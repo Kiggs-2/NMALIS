@@ -1,0 +1,119 @@
+{# Full document pack for one practitioner or facility — review everything on this page. #}
+<div class="card shadow-sm border-primary" id="document-dossier">
+  <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h2 class="h5 mb-0">Document dossier</h2>
+      <p class="small text-muted mb-0">
+        {{ total_document_count }} file{{ total_document_count|pluralize }} on record
+        {% if pending_document_count %}
+          · <span class="text-warning fw-semibold">{{ pending_document_count }} pending review</span>
+        {% else %}
+          · <span class="text-success">All reviewed</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="card-body p-2">
+    {% if document_rows %}
+      <div class="accordion" id="dossierAccordion">
+        {% for row in document_rows %}
+          {% with doc=row.document %}
+          <div class="accordion-item dossier-item border mb-1 rounded" id="doc-{{ doc.pk }}">
+            <h3 class="accordion-header">
+              <button
+                class="accordion-button {% if not row.is_open %}collapsed{% endif %} py-2"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#collapse-doc-{{ doc.pk }}"
+                aria-expanded="{% if row.is_open %}true{% else %}false{% endif %}"
+              >
+                <span class="d-flex flex-wrap align-items-center gap-2 w-100 small">
+                  <span class="fw-semibold">{{ doc.title|truncatechars:40 }}</span>
+                  <span class="badge bg-secondary">{{ doc.get_document_type_display }}</span>
+                  <span class="badge bg-{{ doc.review_badge_color }}">{{ doc.get_review_status_display }}</span>
+                  <span class="text-muted ms-auto small">{{ doc.submitted_at|date:"d M Y" }}</span>
+                </span>
+              </button>
+            </h3>
+            <div
+              id="collapse-doc-{{ doc.pk }}"
+              class="accordion-collapse collapse {% if row.is_open %}show{% endif %}"
+              data-bs-parent="#dossierAccordion"
+            >
+              <div class="accordion-body px-3 py-2">
+                <div class="row g-2">
+                  <div class="col-lg-6">
+                    <dl class="row small mb-1">
+                      <dt class="col-4 text-muted">Reference</dt>
+                      <dd class="col-8"><code>{{ doc.reference_number|truncatechars:24 }}</code></dd>
+                      <dt class="col-4 text-muted">Type</dt>
+                      <dd class="col-8">{{ doc.get_document_type_display }}</dd>
+                      <dt class="col-4 text-muted">Submitted</dt>
+                      <dd class="col-8">{{ doc.submitted_at|date:"d M Y, H:i" }}</dd>
+                      <dt class="col-4 text-muted">Expires</dt>
+                      <dd class="col-8">{{ doc.expires_on|date:"d M Y"|default:"—" }}</dd>
+                      {% if doc.reviewed_by %}
+                        <dt class="col-4 text-muted">Reviewed</dt>
+                        <dd class="col-8">{{ doc.reviewed_at|date:"d M Y, H:i" }} by {{ doc.reviewed_by.username }}</dd>
+                      {% endif %}
+                    </dl>
+                    {% if doc.review_notes %}
+                      <div class="alert alert-light small py-1 mb-1">{{ doc.review_notes|linebreaksbr }}</div>
+                    {% endif %}
+                    {% if doc.file %}
+                      <a href="{% url 'document_preview' doc.pk %}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                        Open file
+                      </a>
+                      {% if doc.file.name|lower|slice:"-4:" == ".pdf" %}
+                        <iframe src="{% url 'document_preview' doc.pk %}" class="w-100 border rounded mt-1" style="height: 240px;" title="{{ doc.title }}"></iframe>
+                      {% endif %}
+                    {% else %}
+                      <p class="small text-muted mb-0">No file attached — verify using registry metadata.</p>
+                    {% endif %}
+                  </div>
+                  <div class="col-lg-6">
+                    {% if row.is_locked %}
+                      <div class="border rounded p-2 bg-light">
+                        <p class="small fw-semibold mb-1 text-success">Review finalised</p>
+                        <p class="small mb-0"><strong>Decision:</strong> <span class="badge bg-{{ doc.review_badge_color }}">{{ doc.get_review_status_display }}</span></p>
+                        {% if doc.review_notes %}<p class="small mb-0 text-muted">{{ doc.review_notes|truncatewords:30 }}</p>{% endif %}
+                        <p class="small text-muted mb-0 mt-1">Reviewed by {{ doc.reviewed_by.username }} on {{ doc.reviewed_at|date:"d M Y, H:i" }}</p>
+                      </div>
+                    {% else %}
+                      <form method="post" class="border rounded p-2 bg-light">
+                        {% csrf_token %}
+                        <input type="hidden" name="document_id" value="{{ doc.pk }}">
+                        <p class="small fw-semibold mb-1">Record verification decision</p>
+                        <div class="mb-1">
+                          <label class="form-label small mb-0">{{ row.form.review_status.label }}</label>
+                          {{ row.form.review_status }}
+                        </div>
+                        <div class="mb-1">
+                          <label class="form-label small mb-0">{{ row.form.review_notes.label }}</label>
+                          {{ row.form.review_notes }}
+                        </div>
+                        <div class="form-check mb-1">
+                          {{ row.form.accountability_acknowledged }}
+                          <label class="form-check-label small" for="{{ row.form.accountability_acknowledged.id_for_label }}">
+                            <span class="small">{{ row.form.accountability_acknowledged.label|truncatewords:12 }}</span>
+                          </label>
+                        </div>
+                        {% if row.form.errors %}
+                          <div class="text-danger small mb-1">{{ row.form.errors }}</div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Save review</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endwith %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted mb-0 p-2">No documents have been submitted for this record yet.</p>
+    {% endif %}
+  </div>
+</div>

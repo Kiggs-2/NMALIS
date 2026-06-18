@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ practitioner.full_name }}{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>{{ practitioner.full_name }}</h1>
+    <p>
+      <code>{{ practitioner.license_number }}</code> ·
+      <span class="badge bg-{{ practitioner.status_color }}">{{ practitioner.get_status_display }}</span>
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'download_practitioner_certificate' practitioner.pk %}" class="btn btn-primary">Download licence PDF</a>
+    <a href="{% url 'regulator_practitioners' %}" class="btn btn-outline-secondary">Back</a>
+  </div>
+</div>
+
+{% load registry_extras %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100"><div class="card-body small"><strong>Specialty</strong><br>{{ practitioner.specialty|default:"—" }}</div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100"><div class="card-body small"><strong>License expiry</strong><br>{{ practitioner.license_expiry }}</div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100"><div class="card-body small"><strong>Indemnity expiry</strong><br>{{ practitioner.indemnity_expiry }}</div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100"><div class="card-body small"><strong>CPD points</strong><br>{{ practitioner.cpd_points }}</div></div>
+  </div>
+</div>
+
+<!-- Derived status card — automatic, not manually enforceable -->
+<div class="card shadow-sm border-{{ practitioner.status_color }} mb-4">
+  <div class="card-header bg-{{ practitioner.status_color }} text-white">
+    <strong>Automatic compliance status</strong>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <p class="mb-1">
+          <strong>Derived status:</strong>
+          <span class="badge bg-{{ practitioner.status_color }} fs-6">{{ derived_status|status_display }}</span>
+        </p>
+        {% if derived_status == 'active' %}
+          <p class="text-success small mb-0">All documents verified, licence valid, CPD threshold met.</p>
+        {% elif derived_status == 'suspended' %}
+          <p class="text-danger small mb-0">A document on record has been rejected. Suspension is automatic.</p>
+        {% elif derived_status == 'expired' %}
+          <p class="text-danger small mb-0">Licence or indemnity has expired. Upload renewed documents.</p>
+        {% elif derived_status == 'pending_renewal' %}
+          <p class="text-warning small mb-0">CPD below threshold or documents pending review.</p>
+        {% endif %}
+      </div>
+      <div class="col-md-6">
+        <p class="small text-muted mb-0">
+          Status is derived automatically from document review outcomes, expiry dates, and CPD points.
+          No manual enforcement is needed — reviewing documents triggers compliance recalculation.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mb-4">
+  {% include "registry/_document_dossier.html" %}
+</div>
+
+<div class="card shadow-sm status-log-scroll">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Status change history</h2>
+    <ul class="list-group list-group-flush small">
+      {% for log in logs %}
+        <li class="list-group-item px-0">
+          {{ log.old_status|default:"—"|status_display }} → {{ log.new_status|status_display }}
+          {% if log.accountability_confirmed %}<span class="badge bg-success ms-1">Accountability logged</span>{% endif %}
+          <span class="text-muted d-block">{{ log.created_at|date:"d M Y, H:i" }} · {{ log.changed_by }}</span>
+        </li>
+      {% empty %}
+        <li class="list-group-item px-0 text-muted">No status changes recorded.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

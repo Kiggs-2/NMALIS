@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load registry_extras %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ title }}</h1>
+  <p>{{ subtitle }}</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <form method="post" class="card shadow-sm">
+      <div class="card-body">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.identifier.id_for_label }}">{{ form.identifier.label }}</label>
+          {{ form.identifier }}
+          {% if form.identifier.errors %}<div class="text-danger small mt-1">{{ form.identifier.errors }}</div>{% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Run credibility check</button>
+      </div>
+    </form>
+  </div>
+  <div class="col-lg-7">
+    {% if result %}
+      <div class="card border-{{ result.color }} shadow-sm credential-card h-100">
+        <div class="card-header bg-{{ result.color }} text-white">
+          <strong>Credibility result</strong>
+        </div>
+        <div class="card-body">
+          {% if result.practitioner %}
+            <h5 class="mb-2">{{ result.practitioner.full_name }}</h5>
+            <p class="mb-3"><span class="badge bg-{{ result.color }}">{{ result.practitioner.get_status_display }}</span></p>
+            <ul class="small mb-0">
+              <li>License: <code>{{ result.practitioner.license_number }}</code></li>
+              <li>Expires: {{ result.practitioner.license_expiry }}</li>
+              <li>CPD: {{ result.practitioner.cpd_points }} points</li>
+            </ul>
+          {% elif result.facility %}
+            <h5 class="mb-2">{{ result.facility.name }}</h5>
+            <p class="mb-3"><span class="badge bg-{{ result.color }}">{{ result.facility.get_status_display }}</span></p>
+            <ul class="small mb-0">
+              <li>Registration: <code>{{ result.facility.registration_number }}</code></li>
+              <li>County: {{ result.facility.county }}</li>
+              <li>Accreditation until: {{ result.facility.accreditation_expiry }}</li>
+            </ul>
+          {% else %}
+            <p class="text-danger mb-0">No matching record in the national registry.</p>
+          {% endif %}
+          <hr>
+          <p class="mb-0">{{ result.summary }}</p>
+        </div>
+      </div>
+    {% else %}
+      <div class="card shadow-sm h-100 border-0 bg-light">
+        <div class="card-body d-flex align-items-center justify-content-center text-muted">
+          Enter a license or registration number to run a Trust Bridge check.
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

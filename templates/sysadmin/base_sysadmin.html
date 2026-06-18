@@ -1,0 +1,62 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}System Admin{% endblock %} — NMALIS Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="{% static 'css/nmalis.css' %}" rel="stylesheet">
+  <style>
+    .sysadmin-sidebar { background: #1a1a2e; min-height: 100vh; }
+    .sysadmin-sidebar .nav-link { color: #ccc; padding: .6rem 1rem; border-radius: .375rem; }
+    .sysadmin-sidebar .nav-link:hover,
+    .sysadmin-sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,.1); }
+    .sysadmin-sidebar .sidebar-heading { color: #888; text-transform: uppercase; font-size: .7rem; letter-spacing: .08em; padding: .6rem 1rem .3rem; }
+  </style>
+</head>
+<body class="d-flex">
+  <aside class="sysadmin-sidebar d-flex flex-column p-3" style="width: 250px; flex-shrink: 0;">
+    <a class="text-white fw-bold text-decoration-none mb-4 d-block" href="{% url 'sysadmin_dashboard' %}">
+      NMALIS<br><small class="fw-normal text-muted">System Admin</small>
+    </a>
+    <nav class="nav flex-column gap-1">
+      <a class="nav-link" href="{% url 'sysadmin_dashboard' %}">Dashboard</a>
+      <div class="sidebar-heading mt-2">User management</div>
+      <a class="nav-link" href="{% url 'sysadmin_user_list' %}">All users</a>
+      <a class="nav-link" href="{% url 'sysadmin_user_create' %}">Create user</a>
+      <div class="sidebar-heading mt-2">Support</div>
+      <a class="nav-link" href="{% url 'sysadmin_ticket_list' %}">Support tickets</a>
+      <div class="sidebar-heading mt-2">System</div>
+      <a class="nav-link" href="{% url 'sysadmin_audit' %}">Audit log</a>
+      <a class="nav-link" href="{% url 'admin:index' %}">Django admin</a>
+    </nav>
+    <div class="mt-auto pt-3 border-top border-secondary small text-muted">
+      Logged in as <strong class="text-white">{{ user.username }}</strong>
+      <div class="d-flex gap-2 mt-2">
+        <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light w-100">Logout</a>
+      </div>
+    </div>
+  </aside>
+  <div class="flex-grow-1 d-flex flex-column">
+    <header class="bg-white border-bottom px-4 py-2 d-flex justify-content-between align-items-center">
+      <h1 class="h5 mb-0 text-muted">{% block page_title %}System Administration{% endblock %}</h1>
+    </header>
+    <main class="p-4 flex-grow-1" style="background: #f4f5f7;">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

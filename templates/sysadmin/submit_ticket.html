@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Submit support ticket{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Submit a support ticket</h1>
+  <p>Need help? Describe your issue below and a system administrator will respond.</p>
+</div>
+<div class="row">
+  <div class="col-lg-7">
+    <form method="post" class="card shadow-sm border-primary">
+      <div class="card-body">
+        {% csrf_token %}
+        {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary w-100">Submit ticket</button>
+      </div>
+    </form>
+    <a href="{% url 'my_tickets' %}" class="btn btn-link mt-2">View my tickets</a>
+  </div>
+</div>
+{% endblock %}

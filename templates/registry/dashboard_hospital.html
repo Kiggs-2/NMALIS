@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load registry_extras %}
+{% block title %}Hospital dashboard{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>Hospital workspace</h1>
+    {% if facility %}
+      <p>{{ facility.name }} — <span class="badge bg-{{ facility.status_color }}">{{ facility.get_status_display }}</span></p>
+    {% else %}
+      <p class="text-warning">No facility linked to your account.</p>
+    {% endif %}
+  </div>
+  {% if facility and facility.status == 'active' %}
+    <a href="{% url 'download_facility_certificate' facility.pk %}" class="btn btn-primary">Download accreditation PDF</a>
+  {% endif %}
+</div>
+
+{% if facility %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ staff|length }}</div><div class="stat-label">Staff on payroll</div></div></div></div>
+  <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ facility.accreditation_expiry|date:"d M Y" }}</div><div class="stat-label">Accreditation expiry</div></div></div></div>
+  <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ recent_checks|length }}</div><div class="stat-label">Recent checks</div></div></div></div>
+</div>
+{% endif %}
+
+{% if alerts %}
+<div class="alert-list mb-4">
+  {% for alert in alerts %}
+    <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div><strong>{{ alert.title }}</strong><br>{{ alert.message }}</div>
+      <a href="{% url 'mark_alert_read' alert.pk %}" class="btn btn-sm btn-outline-primary">Dismiss</a>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Staff on payroll</h2>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-3">
+            <thead><tr><th>Name</th><th>License</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for aff in staff %}
+                <tr>
+                  <td>{{ aff.practitioner.full_name }}</td>
+                  <td><code>{{ aff.practitioner.license_number }}</code></td>
+                  <td><span class="badge bg-{{ aff.practitioner.status_color }}">{{ aff.practitioner.get_status_display }}</span></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-muted">No staff affiliations.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <a href="{% url 'verify_doctor' %}" class="btn btn-primary">Doctor credibility check</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm mb-4">
+      <div class="card-body d-grid gap-2">
+        <a href="{% url 'hospital_facility_profile' %}" class="btn btn-outline-primary">My Facility & documents</a>
+        <a href="{% url 'hospital_apply_licence' %}" class="btn btn-outline-secondary">Renewal submission</a>
+        <a href="{% url 'hospital_account' %}" class="btn btn-link">My account details</a>
+      </div>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase">Recent checks</h2>
+        <ul class="list-group list-group-flush small">
+          {% for c in recent_checks %}
+            <li class="list-group-item px-0">{{ c.query_identifier }} — {{ c.result_status|status_display }}</li>
+          {% empty %}
+            <li class="list-group-item px-0 text-muted">None yet</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

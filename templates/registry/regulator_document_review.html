@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Review document{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ document.title }}</h1>
+  <p>{{ document.get_document_type_display }} · {{ document.subject_label }}</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Document preview</strong>
+        <span class="badge bg-{{ document.review_badge_color }}">{{ document.get_review_status_display }}</span>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-sm-4">Reference</dt>
+          <dd class="col-sm-8"><code>{{ document.reference_number }}</code></dd>
+          <dt class="col-sm-4">Expires</dt>
+          <dd class="col-sm-8">{{ document.expires_on|default:"—" }}</dd>
+          <dt class="col-sm-4">Submitted</dt>
+          <dd class="col-sm-8">{{ document.submitted_at|date:"d M Y, H:i" }}</dd>
+          {% if document.reviewed_by %}
+            <dt class="col-sm-4">Last reviewed</dt>
+            <dd class="col-sm-8">{{ document.reviewed_at|date:"d M Y, H:i" }} by {{ document.reviewed_by.username }}</dd>
+          {% endif %}
+        </dl>
+        {% if document.file %}
+          <hr>
+          <p class="mb-2"><a href="{% url 'document_preview' document.pk %}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">Open / download file</a></p>
+          {% if document.file.name|lower|slice:"-4:" == ".pdf" %}
+            <iframe src="{% url 'document_preview' document.pk %}" class="w-100 border rounded" style="height: 420px;" title="Document preview"></iframe>
+          {% endif %}
+        {% else %}
+          <div class="alert alert-secondary mb-0 mt-3">No file attached. Verify using registry metadata and cross-reference below.</div>
+        {% endif %}
+        {% if document.practitioner %}
+          <hr>
+          <h3 class="h6">Registry cross-check (practitioner)</h3>
+          <ul class="small mb-0">
+            <li>Status: <strong>{{ document.practitioner.get_status_display }}</strong></li>
+            <li>License expiry: {{ document.practitioner.license_expiry }}</li>
+            <li>CPD points: {{ document.practitioner.cpd_points }}</li>
+          </ul>
+        {% elif document.facility %}
+          <hr>
+          <h3 class="h6">Registry cross-check (facility)</h3>
+          <ul class="small mb-0">
+            <li>Status: <strong>{{ document.facility.get_status_display }}</strong></li>
+            <li>Accreditation expiry: {{ document.facility.accreditation_expiry }}</li>
+          </ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if is_locked %}
+      <div class="card shadow-sm border-success">
+        <div class="card-header bg-success text-white"><strong>Review finalised</strong></div>
+        <div class="card-body">
+          <p class="mb-1"><strong>Decision:</strong> {{ document.get_review_status_display }}</p>
+          {% if document.review_notes %}<p class="mb-1"><strong>Notes:</strong> {{ document.review_notes }}</p>{% endif %}
+          <p class="text-muted small mb-3">Reviewed by {{ document.reviewed_by.username }} on {{ document.reviewed_at|date:"d M Y, H:i" }}</p>
+          <div class="alert alert-info small mb-0">This review has been finalised and cannot be changed.</div>
+        </div>
+      </div>
+    {% else %}
+      <form method="post" class="card shadow-sm border-primary">
+        <div class="card-header bg-primary text-white"><strong>Verification decision</strong></div>
+        <div class="card-body">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">{{ form.review_status.label }}</label>
+            {{ form.review_status }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.review_notes.label }}</label>
+            {{ form.review_notes }}
+          </div>
+          <div class="alert alert-warning mb-3">
+            <div class="form-check">
+              {{ form.accountability_acknowledged }}
+              <label class="form-check-label" for="{{ form.accountability_acknowledged.id_for_label }}">
+                {{ form.accountability_acknowledged.label }}
+              </label>
+            </div>
+            {% if form.accountability_acknowledged.errors %}
+              <div class="text-danger small mt-1">{{ form.accountability_acknowledged.errors }}</div>
+            {% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Save review</button>
+        </div>
+      </form>
+    {% endif %}
+    <div class="mt-2 text-center">
+      {% if document.practitioner_id %}
+        <a href="{% url 'regulator_practitioner_detail' document.practitioner_id %}" class="btn btn-link">Back to dossier</a>
+      {% elif document.facility_id %}
+        <a href="{% url 'regulator_facility_detail' document.facility_id %}" class="btn btn-link">Back to dossier</a>
+      {% else %}
+        <a href="{% url 'regulator_documents' %}" class="btn btn-link">Back to list</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

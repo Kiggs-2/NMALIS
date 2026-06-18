@@ -1,0 +1,75 @@
+{% extends "sysadmin/base_sysadmin.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}System Dashboard{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="card"><div class="card-body text-center"><div class="fs-2 fw-bold text-primary">{{ user_count }}</div><div class="text-muted small">Total users</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body text-center"><div class="fs-2 fw-bold text-success">{{ active_users }}</div><div class="text-muted small">Active users</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body text-center"><div class="fs-2 fw-bold">{{ practitioner_count }}</div><div class="text-muted small">Practitioners</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body text-center"><div class="fs-2 fw-bold">{{ facility_count }}</div><div class="text-muted small">Facilities</div></div></div></div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="card border-danger"><div class="card-body text-center"><div class="fs-2 fw-bold text-danger">{{ open_tickets }}</div><div class="text-muted small"><a href="{% url 'sysadmin_ticket_list' %}?status=open">Open tickets</a></div></div></div></div>
+  <div class="col-md-4"><div class="card border-warning"><div class="card-body text-center"><div class="fs-2 fw-bold text-warning">{{ pending_documents }}</div><div class="text-muted small">Pending documents</div></div></div></div>
+  <div class="col-md-4"><div class="card border-info"><div class="card-body text-center"><div class="fs-2 fw-bold text-info">{{ pending_applications }}</div><div class="text-muted small">Pending applications</div></div></div></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><strong>Users by role</strong></div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          {% for row in role_breakdown %}
+            <tr><td>{{ row.role }}</td><td class="text-end">{{ row.count }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between"><strong>Recent support tickets</strong><a href="{% url 'sysadmin_ticket_list' %}" class="btn btn-sm btn-outline-primary">All tickets</a></div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>#</th><th>Subject</th><th>From</th><th>Status</th><th>Created</th></tr></thead>
+          <tbody>
+            {% for t in recent_tickets %}
+              <tr>
+                <td><a href="{% url 'sysadmin_ticket_detail' t.pk %}">{{ t.pk }}</a></td>
+                <td>{{ t.subject|truncatewords:8 }}</td>
+                <td>{{ t.submitted_by.username }}</td>
+                <td><span class="badge bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
+                <td class="small text-muted">{{ t.created_at|date:"d M Y, H:i" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-muted text-center py-3">No tickets yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header d-flex justify-content-between"><strong>Recent audit log</strong><a href="{% url 'sysadmin_audit' %}" class="btn btn-sm btn-outline-secondary">Full log</a></div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Entity</th><th>Change</th><th>By</th><th>When</th></tr></thead>
+      <tbody>
+        {% for log in recent_logs %}
+          <tr>
+            <td>{{ log.entity_label }}</td>
+            <td>{{ log.old_status|default:"—" }} &rarr; {{ log.new_status }}</td>
+            <td>{{ log.changed_by|default:"System" }}</td>
+            <td class="small text-muted">{{ log.created_at|date:"d M Y, H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="text-muted text-center">No changes logged.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

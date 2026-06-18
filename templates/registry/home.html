@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block body_class %}landing-page{% endblock %}
+{% block title %}National Medical Accreditation and Licensing Information System{% endblock %}
+{% block content %}
+<section class="landing-hero">
+  <div class="container">
+    <div class="row align-items-center g-5 py-5 py-lg-6">
+      <div class="col-lg-7">
+        <span class="landing-pill">Kenya · Healthcare regulation</span>
+        <h1 class="landing-title">National Medical Accreditation and Licensing Information System</h1>
+        <p class="landing-lead">
+          Secure, real-time oversight for regulators, hospitals, and practitioners — from document
+          verification to downloadable licences and accreditation certificates.
+        </p>
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          <a href="{% url 'login' %}" class="btn btn-light btn-lg px-4">Stakeholder login</a>
+          <a href="#capabilities" class="btn btn-outline-light btn-lg px-4">Explore capabilities</a>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="landing-glass p-4 p-lg-5">
+          <h2 class="h5 text-white mb-4">Built for three stakeholders</h2>
+          <div class="landing-role">
+            <strong>KMPDC Regulator</strong>
+            <span>Review dossiers, enforce status, issue PDF certificates</span>
+          </div>
+          <div class="landing-role">
+            <strong>Hospital administrator</strong>
+            <span>Verify staff, manage facility accreditation</span>
+          </div>
+          <div class="landing-role">
+            <strong>Medical practitioner</strong>
+            <span>Track licence standing, verify employers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="capabilities" class="py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold">Core capabilities</h2>
+      <p class="text-muted mb-0">Aligned workflows across the national registry</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="feature-card h-100">
+          <div class="feature-icon">01</div>
+          <h3 class="h5">Document dossiers</h3>
+          <p class="text-muted mb-0">All submissions grouped per practitioner or facility for one-place review.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card h-100">
+          <div class="feature-icon">02</div>
+          <h3 class="h5">Reciprocal verification</h3>
+          <p class="text-muted mb-0">Hospitals check doctors; doctors check hospitals — closing the trust gap.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-card h-100">
+          <div class="feature-icon">03</div>
+          <h3 class="h5">PDF certificates</h3>
+          <p class="text-muted mb-0">Downloadable practising licences and facility accreditation for official use.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="landing-cta py-5">
+  <div class="container text-center">
+    <h2 class="fw-bold mb-3">Ready to access your workspace?</h2>
+    <p class="text-secondary mb-4">Sign in with your stakeholder credentials issued by the authority.</p>
+    <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-5">Sign in to the system</a>
+  </div>
+</section>
+{% endblock %}

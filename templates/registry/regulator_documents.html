@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Document registry{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div>
+    <h1>Document registry</h1>
+    <p>Grouped by practitioner or facility — open a dossier to review every file in one place</p>
+  </div>
+  <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to dashboard</a>
+</div>
+
+<form class="row g-2 mb-4" method="get">
+  <div class="col-md-3">
+    <select name="status" class="form-select">
+      <option value="">All statuses</option>
+      {% for value, label in review_statuses %}
+        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select name="type" class="form-select">
+      <option value="">All document types</option>
+      {% for value, label in document_types %}
+        <option value="{{ value }}" {% if doc_type == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search name or license number...">
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-primary w-100">Filter</button>
+  </div>
+</form>
+
+{% if subject_groups %}
+  {% for group in subject_groups %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h2 class="h6 mb-0">{{ group.label }}</h2>
+          <span class="small text-muted">{{ group.documents|length }} document{{ group.documents|length|pluralize }}</span>
+          {% if group.pending_count %}
+            <span class="badge bg-warning text-dark ms-1">{{ group.pending_count }} pending</span>
+          {% endif %}
+        </div>
+        {% if group.detail_url_name %}
+          <a href="{% url group.detail_url_name group.detail_pk %}" class="btn btn-primary btn-sm">Open full dossier</a>
+        {% endif %}
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for doc in group.documents %}
+          <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <strong>{{ doc.title }}</strong>
+              <span class="badge bg-secondary ms-1">{{ doc.get_document_type_display }}</span>
+              <br>
+              <code class="small">{{ doc.reference_number }}</code>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-{{ doc.review_badge_color }}">{{ doc.get_review_status_display }}</span>
+              {% if group.detail_url_name %}
+                <a href="{% url group.detail_url_name group.detail_pk %}#doc-{{ doc.pk }}" class="btn btn-sm btn-outline-primary">Review here</a>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="alert alert-secondary">No document submissions match your filters.</div>
+{% endif %}
+{% endblock %}
