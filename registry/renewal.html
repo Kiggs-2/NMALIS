@@ -2,10 +2,10 @@
 {% block title %}Renewal{% endblock %}
 {% block content %}
 <div class="container">
-    <h2>Renewal Process</h2>
+    <h2>Let's Renew Your Accreditation</h2>
 
     {% if step == 'form' %}
-        <p>Please fill out the renewal form below.</p>
+        <p>Just fill out the form below to get started.</p>
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {{ form.as_p }}
