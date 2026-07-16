@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.conf import settings
@@ -106,7 +107,7 @@ def practitioner_renewal(request):
                     doc = RegistryDocument(
                         practitioner=profile,
                         document_type=doc_type,
-                        title=f"{doc_type.replace('_', ' ').title()} — Renewal submission",
+                        title=f"{doc_type.replace('_', ').title()} — Renewal submission",
                         reference_number=ref,
                         review_status=RegistryDocument.ReviewStatus.PENDING,
                     )
