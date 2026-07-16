@@ -8,6 +8,7 @@ from django.contrib.auth.views import LoginView
 from django.db.models import Count, Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import TemplateView
 
@@ -27,6 +28,7 @@ from .models import (
     FacilityApplication,
     HealthcareFacility,
     LicenseStatus,
+    MpesaStkTransaction,
     PractitionerProfile,
     PractitionerRenewalApplication,
     RegistryDocument,
@@ -52,6 +54,7 @@ from .services import (
     verify_facility,
     verify_practitioner,
 )
+from .mpesa.utils import get_user_pending_transaction, stk_push
 
 
 class HomeView(TemplateView):
@@ -586,12 +589,62 @@ def facility_renewal(request):
         )
         return redirect("dashboard")
 
+    step = request.GET.get("step", "form")
+    pending_tx = get_user_pending_transaction(request.user)
+    renewal_fee = django_settings.MPESA_FACILITY_RENEWAL_FEE
+
+    if step == "payment":
+        if request.method == "POST" and request.POST.get("action") == "initiate_payment":
+            phone = request.POST.get("mpesa_phone", "").strip()
+            try:
+                stk_push(
+                    user=request.user,
+                    phone_number=phone,
+                    amount=renewal_fee,
+                    account_reference=facility.registration_number,
+                    renewal_type=MpesaStkTransaction.RenewalType.FACILITY,
+                    facility=facility,
+                )
+                messages.success(
+                    request,
+                    "M-Pesa STK push sent. Check your phone and enter your PIN to complete payment.",
+                )
+            except (ValueError, RuntimeError) as exc:
+                messages.error(request, str(exc))
+            return redirect(f"{reverse('facility_renewal')}?step=payment")
+
+        return render(
+            request,
+            "registry/renewal.html",
+            {
+                "entity": facility,
+                "entity_type": "facility",
+                "step": "payment",
+                "renewal_fee": renewal_fee,
+                "pending_tx": get_user_pending_transaction(request.user),
+            },
+        )
+
     form = FacilityRenewalForm(request.POST if request.method == "POST" else None, instance=facility)
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Facility profile updated. Await KMPDC accreditation renewal approval.")
-        return redirect("dashboard")
-    return render(request, "registry/renewal.html", {"form": form, "entity": facility, "entity_type": "facility"})
+        messages.success(
+            request,
+            "Facility details saved. Complete M-Pesa payment to finalise your accreditation renewal.",
+        )
+        return redirect(f"{reverse('facility_renewal')}?step=payment")
+    return render(
+        request,
+        "registry/renewal.html",
+        {
+            "form": form,
+            "entity": facility,
+            "entity_type": "facility",
+            "step": "form",
+            "pending_tx": pending_tx,
+            "renewal_fee": renewal_fee,
+        },
+    )
 
 
 @role_required(User.Role.PRACTITIONER)
@@ -613,9 +666,59 @@ def practitioner_renewal(request):
         )
         return redirect("dashboard")
 
+    step = request.GET.get("step", "form")
+    renewal_id = request.GET.get("renewal_id")
+    pending_tx = get_user_pending_transaction(request.user)
+    renewal_fee = django_settings.MPESA_PRACTITIONER_RENEWAL_FEE
+
+    if step == "payment":
+        renewal_app = None
+        if renewal_id:
+            renewal_app = PractitionerRenewalApplication.objects.filter(
+                pk=renewal_id,
+                practitioner=profile,
+            ).first()
+        if not renewal_app:
+            renewal_app = profile.renewal_applications.order_by("-submitted_at").first()
+        if not renewal_app:
+            messages.warning(request, "Submit your renewal application before proceeding to payment.")
+            return redirect("practitioner_renewal")
+
+        if request.method == "POST" and request.POST.get("action") == "initiate_payment":
+            phone = request.POST.get("mpesa_phone", "").strip()
+            try:
+                stk_push(
+                    user=request.user,
+                    phone_number=phone,
+                    amount=renewal_fee,
+                    account_reference=profile.license_number,
+                    renewal_type=MpesaStkTransaction.RenewalType.PRACTITIONER,
+                    practitioner=profile,
+                    practitioner_renewal=renewal_app,
+                )
+                messages.success(
+                    request,
+                    "M-Pesa STK push sent. Check your phone and enter your PIN to complete payment.",
+                )
+            except (ValueError, RuntimeError) as exc:
+                messages.error(request, str(exc))
+            return redirect(f"practitioner_renewal?step=payment&renewal_id={renewal_app.pk}")
+
+        return render(
+            request,
+            "registry/renewal.html",
+            {
+                "entity": profile,
+                "entity_type": "practitioner",
+                "step": "payment",
+                "renewal_app": renewal_app,
+                "renewal_fee": renewal_fee,
+                "pending_tx": get_user_pending_transaction(request.user),
+            },
+        )
+
     form = PractitionerLicenceRenewalForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        # Save renewal application data
         renewal_app = PractitionerRenewalApplication(
             practitioner=profile,
             current_employer=form.cleaned_data.get("current_employer", ""),
@@ -628,7 +731,6 @@ def practitioner_renewal(request):
         )
         renewal_app.save()
 
-        # Save uploaded documents
         created_docs = []
         for field_name, doc_type in [
             ("indemnity_file", RegistryDocument.DocumentType.PROFESSIONAL_INDEMNITY),
@@ -650,13 +752,17 @@ def practitioner_renewal(request):
         if created_docs:
             messages.success(
                 request,
-                f"Renewal application submitted. {len(created_docs)} document(s) uploaded for review. "
-                "A regulator will verify them and your CPD will be updated automatically upon verification.",
+                f"Renewal application submitted ({len(created_docs)} document(s) uploaded). "
+                "Proceed to M-Pesa payment to complete your renewal.",
             )
         else:
-            messages.warning(request, "Renewal form saved but no documents were uploaded. Please upload at least one supporting document.")
-        return redirect("practitioner_renewal")
-    # Show previous renewal applications
+            messages.warning(
+                request,
+                "Renewal form saved but no documents were uploaded. "
+                "Proceed to payment, or return to upload supporting documents.",
+            )
+        return redirect(f"practitioner_renewal?step=payment&renewal_id={renewal_app.pk}")
+
     previous_applications = PractitionerRenewalApplication.objects.filter(
         practitioner=profile
     )[:5]
@@ -669,6 +775,9 @@ def practitioner_renewal(request):
             "today": timezone.now().date(),
             "renewal_form": form,
             "previous_applications": previous_applications,
+            "step": "form",
+            "pending_tx": pending_tx,
+            "renewal_fee": renewal_fee,
         },
     )
 
