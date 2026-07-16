@@ -1,0 +1,46 @@
+{% extends "registry/base.html" %}
+{% block title %}Renewal{% endblock %}
+{% block content %}
+<div class="container">
+    <h2>Renewal Process</h2>
+
+    {% if step == 'form' %}
+        <p>Please fill out the renewal form below.</p>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Submit Form</button>
+        </form>
+    {% elif step == 'payment' %}
+        <div class="payment-container">
+            <h2>Complete Your Renewal Payment</h2>
+            
+            {% if pending_tx and pending_tx.status == 'PENDING' %}
+                <!-- Show Pending State with STK Controls -->
+                <div class="pending-status-box">
+                    <p>Waiting for payment of <strong>KES {{ pending_tx.amount }}</strong> to phone <strong>{{ pending_tx.phone_number }}</strong>...</p>
+                    <span class="spinner"></span>
+                    
+                    <div class="control-buttons">
+                        <a href="{% url 'cancel_stk_push' pending_tx.id %}" class="btn btn-danger">Cancel Pending STK Push</a>
+                        
+                        <form action="{% url 'resend_stk_push' pending_tx.id %}" method="POST" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="phone_number" value="{{ pending_tx.phone_number }}">
+                            <button type="submit" class="btn btn-secondary">Resend STK Push</button>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Show Standard Phone Input Form if no transaction is currently pending -->
+                <form method="POST">
+                    {% csrf_token %}
+                    <label for="phone_number">Enter M-Pesa Phone Number (Format: 2547XXXXXXXX):</label>
+                    <input type="text" name="phone_number" placeholder="254712345678" required>
+                    <button type="submit" class="btn btn-primary">Initiate Payment</button>
+                </form>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
