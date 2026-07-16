@@ -25,7 +25,7 @@ urlpatterns = [
     ),
     path(
         "reset/done/",
-        auth_views.PasswordResetCompleteView.as_view(),
+        auth_views.PasswordChangeCompleteView.as_view(),
         name="password_reset_complete",
     ),
     path(
@@ -81,6 +81,8 @@ urlpatterns = [
     path("hospital/account/", views.hospital_account, name="hospital_account"),
     path("renewal/facility/", views.facility_renewal, name="facility_renewal"),
     path("renewal/practitioner/", views.practitioner_renewal, name="practitioner_renewal"),
+    path("renewal/cancel/<int:tx_id>/", views.cancel_stk_push, name="cancel_stk_push"),
+    path("renewal/resend/<int:tx_id>/", views.resend_stk_push, name="resend_stk_push"),
     path("mpesa/callback/", mpesa_views.mpesa_callback, name="mpesa_callback"),
     path("mpesa/cancel/<int:pk>/", mpesa_views.cancel_pending, name="mpesa_cancel_pending"),
     path("mpesa/resend/<int:pk>/", mpesa_views.resend_pending, name="mpesa_resend_pending"),
