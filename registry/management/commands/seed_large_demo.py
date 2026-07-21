@@ -44,6 +44,7 @@ class Command(BaseCommand):
             "Radiology, Laboratory, Pharmacy",
         ]
 
+        # --- 1. SEED FACILITIES ---
         facilities = []
         for i in range(1, 31):
             reg = f"FAC-KEN-{i:03d}"
@@ -59,6 +60,7 @@ class Command(BaseCommand):
             )
             facilities.append(facility)
 
+        # --- 2. SEED PRACTITIONERS ---
         practitioners = []
         first_names = ["Sample A", "Sample B", "Sample C", "Sample D", "Sample E"]
         last_names = ["Mwangi", "Otieno", "Kariuki", "Wanjiku", "Mutua", "Njeri", "Kamau", "Achieng"]
@@ -87,6 +89,8 @@ class Command(BaseCommand):
             practitioners.append(p)
 
         sample_main = practitioners[0]
+
+        # --- 3. SEED DOCTOR USERS ---
         for idx, p in enumerate(practitioners[1:16], start=2):
             if User.objects.filter(practitioner_profile=p).exists():
                 continue
@@ -97,6 +101,8 @@ class Command(BaseCommand):
                 practitioner_profile=p,
                 email=f"doctor_{idx:02d}@demo.nmalis.ke",
             )
+
+        # --- 4. AFFILIATIONS & PRACTITIONER DOCUMENTS ---
         main_facility = facilities[0]
         for i, p in enumerate(practitioners):
             fac = facilities[i % len(facilities)]
@@ -134,6 +140,7 @@ class Command(BaseCommand):
                 if not doc.file:
                     doc.file.save(f"{ref}.pdf", ContentFile(demo_pdf), save=True)
 
+        # --- 5. FACILITY DOCUMENTS ---
         for i, facility in enumerate(facilities):
             ref = f"{facility.registration_number}-ACC"
             review = RegistryDocument.ReviewStatus.VERIFIED if i % 4 else RegistryDocument.ReviewStatus.PENDING
@@ -150,6 +157,7 @@ class Command(BaseCommand):
             if not doc.file:
                 doc.file.save(f"{ref}.pdf", ContentFile(demo_pdf), save=True)
 
+        # --- 6. REGULATOR ACCOUNT ---
         regulator, created = User.objects.update_or_create(
             username="regulator",
             defaults={"role": User.Role.REGULATOR, "email": "regulator@kmpdc.demo.ke", "is_staff": True},
@@ -158,6 +166,7 @@ class Command(BaseCommand):
             regulator.set_password(password)
             regulator.save()
 
+        # --- 7. HOSPITAL ADMIN ACCOUNTS ---
         hospital_admin, created = User.objects.update_or_create(
             username="hospital_admin",
             defaults={
@@ -175,6 +184,21 @@ class Command(BaseCommand):
             hospital_admin.personal_physician = sample_main
             hospital_admin.save(update_fields=["facility", "personal_physician"])
 
+        for i in range(1, 6):
+            admin, created = User.objects.update_or_create(
+                username=f"hospital_admin_{i}",
+                defaults={
+                    "role": User.Role.HOSPITAL_ADMIN,
+                    "facility": facilities[i],
+                    "email": f"hospital_admin_{i}@demo.nmalis.ke",
+                    "personal_physician": practitioners[i * 3],
+                },
+            )
+            if created:
+                admin.set_password(password)
+                admin.save()
+
+        # --- 8. SAMPLE DOCTOR ACCOUNT ---
         existing_holder = User.objects.filter(practitioner_profile=sample_main).first()
         if existing_holder and existing_holder.username != "doctor_sample":
             existing_holder.practitioner_profile = None
@@ -194,20 +218,7 @@ class Command(BaseCommand):
             doc_sample.practitioner_profile = sample_main
             doc_sample.save(update_fields=["practitioner_profile"])
 
-        for i in range(1, 6):
-            admin, created = User.objects.update_or_create(
-                username=f"hospital_admin_{i}",
-                defaults={
-                    "role": User.Role.HOSPITAL_ADMIN,
-                    "facility": facilities[i],
-                    "email": f"hospital_admin_{i}@demo.nmalis.ke",
-                    "personal_physician": practitioners[i * 3],
-                },
-            )
-            if created:
-                admin.set_password(password)
-                admin.save()
-
+        # --- 9. FACILITY APPLICATIONS ---
         for i in range(3):
             FacilityApplication.objects.get_or_create(
                 facility=facilities[i + 1],
@@ -229,34 +240,33 @@ class Command(BaseCommand):
                 },
             )
 
-        self.stdout.write(self.style.SUCCESS("Large demo dataset loaded."))
-        self.stdout.write(f"Facilities: {len(facilities)} | Practitioners: {len(practitioners)}")
-        self.stdout.write("Login: regulator / hospital_admin / doctor_sample / doctor_01 … doctor_15")
-        self.stdout.write(f"Password: {password}")
-# --- SEED SYSTEM ADMIN ---
-sysadmin, created = User.objects.update_or_create(
-    username="sysadmin",
-    defaults={
-        "role": User.Role.SYSTEM_ADMIN,
-        "email": "sysadmin@nmalis.ke",
-        "first_name": "System",
-        "last_name": "Administrator",
-        "is_staff": True,
-        "is_superuser": True,
-    },
-)
-if created or not sysadmin.check_password(password):
-    sysadmin.set_password(password)
-    sysadmin.save()
+        # --- 10. SYSTEM ADMIN ACCOUNT ---
+        sysadmin, created = User.objects.update_or_create(
+            username="sysadmin",
+            defaults={
+                "role": User.Role.SYSTEM_ADMIN,
+                "email": "sysadmin@nmalis.ke",
+                "first_name": "System",
+                "last_name": "Administrator",
+                "is_staff": True,
+                "is_superuser": True,
+            },
+        )
+        sysadmin.role = User.Role.SYSTEM_ADMIN
+        sysadmin.is_staff = True
+        sysadmin.is_superuser = True
+        sysadmin.set_password(password)
+        sysadmin.save()
 
-    self.stdout.write(self.style.SUCCESS("Large demo dataset loaded successfully."))
-self.stdout.write(f"Facilities: {len(facilities)} | Practitioners: {len(practitioners)}")
-self.stdout.write("--------------------------------------------------")
-self.stdout.write(f"Default Login Password: {password}")
-self.stdout.write("Available Accounts:")
-self.stdout.write("  - sysadmin         (System Admin / Superuser)")
-self.stdout.write("  - regulator        (Regulator / KMPDC)")
-self.stdout.write("  - hospital_admin   (Hospital Admin)")
-self.stdout.write("  - doctor_sample    (Practitioner)")
-self.stdout.write("  - doctor_02 ... doctor_15")
-self.stdout.write("--------------------------------------------------")
+        # --- OUTPUT CONSOLE SUMMARY ---
+        self.stdout.write(self.style.SUCCESS("Large demo dataset loaded successfully."))
+        self.stdout.write(f"Facilities: {len(facilities)} | Practitioners: {len(practitioners)}")
+        self.stdout.write("--------------------------------------------------")
+        self.stdout.write(f"Default Login Password: {password}")
+        self.stdout.write("Available Accounts:")
+        self.stdout.write("  - sysadmin         (System Admin / Superuser)")
+        self.stdout.write("  - regulator        (Regulator / KMPDC)")
+        self.stdout.write("  - hospital_admin   (Hospital Admin)")
+        self.stdout.write("  - doctor_sample    (Practitioner)")
+        self.stdout.write("  - doctor_02 ... doctor_15")
+        self.stdout.write("--------------------------------------------------")
