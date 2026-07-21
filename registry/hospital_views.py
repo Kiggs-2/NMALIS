@@ -4,6 +4,7 @@ import datetime
 from django.conf import settings as django_settings
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from .decorators import role_required
 from .forms import FacilityLicenceApplicationForm, FacilityServicesUpdateForm
@@ -89,11 +90,26 @@ def hospital_apply_licence(request):
     if request.method == "POST":
         form = FacilityLicenceApplicationForm(request.POST, request.FILES)
         if form.is_valid():
-            app = form.save(commit=False)
-            app.facility = facility
-            app.application_type = FacilityApplication.ApplicationType.LICENCE_RENEWAL
-            app.submitted_by = request.user
-            app.save()
+            # Prevent duplicate application_type constraint error
+            existing_app = FacilityApplication.objects.filter(
+                facility=facility,
+                application_type=FacilityApplication.ApplicationType.LICENCE_RENEWAL,
+            ).first()
+
+            if existing_app:
+                app = form.save(commit=False)
+                # Transfer valid form data to the existing record
+                for field in form.cleaned_data:
+                    setattr(existing_app, field, form.cleaned_data[field])
+                existing_app.submitted_by = request.user
+                existing_app.status = FacilityApplication.ApplicationStatus.PENDING
+                existing_app.save()
+            else:
+                app = form.save(commit=False)
+                app.facility = facility
+                app.application_type = FacilityApplication.ApplicationType.LICENCE_RENEWAL
+                app.submitted_by = request.user
+                app.save()
 
             payment = FacilityRenewalPayment.objects.create(
                 facility=facility,
@@ -160,11 +176,26 @@ def hospital_apply_services(request):
     if request.method == "POST":
         form = FacilityServicesUpdateForm(request.POST, request.FILES)
         if form.is_valid():
-            app = form.save(commit=False)
-            app.facility = facility
-            app.application_type = FacilityApplication.ApplicationType.SERVICES_UPDATE
-            app.submitted_by = request.user
-            app.save()
+            # Prevent duplicate application_type constraint error
+            existing_app = FacilityApplication.objects.filter(
+                facility=facility,
+                application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
+            ).first()
+
+            if existing_app:
+                app = form.save(commit=False)
+                # Transfer valid form data to the existing record
+                for field in form.cleaned_data:
+                    setattr(existing_app, field, form.cleaned_data[field])
+                existing_app.submitted_by = request.user
+                existing_app.status = FacilityApplication.ApplicationStatus.PENDING
+                existing_app.save()
+            else:
+                app = form.save(commit=False)
+                app.facility = facility
+                app.application_type = FacilityApplication.ApplicationType.SERVICES_UPDATE
+                app.submitted_by = request.user
+                app.save()
 
             payment = FacilityRenewalPayment.objects.create(
                 facility=facility,
