@@ -587,3 +587,53 @@ class FacilityPaymentFlowTests(TestCase):
         self.assertEqual(r.status_code, 200)
         payment.refresh_from_db()
         self.assertEqual(payment.status, FacilityRenewalPayment.Status.FAILED)
+
+    def test_licence_renewal_creates_registry_document(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        data = dict(self.application_data)
+        data["supporting_file"] = SimpleUploadedFile(
+            "licence_doc.pdf",
+            b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF",
+            content_type="application/pdf",
+        )
+        r = self.client.post(reverse("hospital_apply_licence"), data)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(RegistryDocument.objects.filter(facility=self.facility).count(), 1)
+        doc = RegistryDocument.objects.get(facility=self.facility)
+        self.assertEqual(doc.document_type, RegistryDocument.DocumentType.FACILITY_ACCREDITATION)
+        self.assertEqual(doc.review_status, RegistryDocument.ReviewStatus.PENDING)
+
+    def test_services_update_creates_registry_document(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        data = dict(self.application_data)
+        data["supporting_file"] = SimpleUploadedFile(
+            "services_doc.pdf",
+            b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF",
+            content_type="application/pdf",
+        )
+        r = self.client.post(reverse("hospital_apply_services"), data)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(RegistryDocument.objects.filter(facility=self.facility).count(), 1)
+        doc = RegistryDocument.objects.get(facility=self.facility)
+        self.assertEqual(doc.document_type, RegistryDocument.DocumentType.FACILITY_ACCREDITATION)
+        self.assertEqual(doc.review_status, RegistryDocument.ReviewStatus.PENDING)
+
+    def test_regulator_sees_facility_application_document(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        data = dict(self.application_data)
+        data["supporting_file"] = SimpleUploadedFile(
+            "reg_doc.pdf",
+            b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF",
+            content_type="application/pdf",
+        )
+        self.client.post(reverse("hospital_apply_licence"), data)
+        regulator = User.objects.create_user(
+            username="reg_doc",
+            password="pass12345",
+            role=User.Role.REGULATOR,
+            email="reg_doc@test.ke",
+        )
+        self.client.login(username="reg_doc", password="pass12345")
+        r = self.client.get(reverse("regulator_documents"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, self.facility.registration_number)

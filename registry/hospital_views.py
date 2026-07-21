@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from .decorators import role_required
 from .forms import FacilityLicenceApplicationForm, FacilityServicesUpdateForm
-from .models import FacilityApplication, FacilityRenewalPayment, StaffAffiliation, User
+from .models import FacilityApplication, FacilityRenewalPayment, RegistryDocument, StaffAffiliation, User
 from . import mpesa as mpesa_client
 
 
@@ -38,6 +38,21 @@ def _cancel_stale_pending_payments(facility):
     )
     updated = stale_payments.update(status=FacilityRenewalPayment.Status.FAILED, updated_at=datetime.datetime.now(datetime.timezone.utc))
     return updated
+
+
+def _create_registry_document_from_application(application, supporting_file):
+    if not supporting_file:
+        return None
+    ref = f"APP-{application.facility.registration_number}-{application.pk}-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+    doc = RegistryDocument(
+        facility=application.facility,
+        document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
+        title=f"{application.get_application_type_display()} — supporting document",
+        reference_number=ref,
+        review_status=RegistryDocument.ReviewStatus.PENDING,
+    )
+    doc.file.save(supporting_file.name, supporting_file, save=True)
+    return doc
 
 
 @role_required(User.Role.HOSPITAL_ADMIN)
@@ -104,12 +119,14 @@ def hospital_apply_licence(request):
                 existing_app.submitted_by = request.user
                 existing_app.status = FacilityApplication.ApplicationStatus.PENDING
                 existing_app.save()
+                _create_registry_document_from_application(existing_app, form.cleaned_data.get("supporting_file"))
             else:
                 app = form.save(commit=False)
                 app.facility = facility
                 app.application_type = FacilityApplication.ApplicationType.LICENCE_RENEWAL
                 app.submitted_by = request.user
                 app.save()
+                _create_registry_document_from_application(app, form.cleaned_data.get("supporting_file"))
 
             payment = FacilityRenewalPayment.objects.create(
                 facility=facility,
@@ -190,12 +207,14 @@ def hospital_apply_services(request):
                 existing_app.submitted_by = request.user
                 existing_app.status = FacilityApplication.ApplicationStatus.PENDING
                 existing_app.save()
+                _create_registry_document_from_application(existing_app, form.cleaned_data.get("supporting_file"))
             else:
                 app = form.save(commit=False)
                 app.facility = facility
                 app.application_type = FacilityApplication.ApplicationType.SERVICES_UPDATE
                 app.submitted_by = request.user
                 app.save()
+                _create_registry_document_from_application(app, form.cleaned_data.get("supporting_file"))
 
             payment = FacilityRenewalPayment.objects.create(
                 facility=facility,
