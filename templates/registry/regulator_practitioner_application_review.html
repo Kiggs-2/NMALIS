@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load registry_extras %}
+{% block title %}Review practitioner application{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>Review practitioner renewal</h1>
+    <p>{{ application.practitioner.full_name }} — {{ application.practitioner.license_number }}</p>
+  </div>
+  <a href="{% url 'regulator_practitioner_applications' %}" class="btn btn-outline-secondary">Back to list</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white"><strong>Application details</strong></div>
+      <div class="card-body small">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th class="text-muted" style="width: 40%;">Practitioner</th><td>{{ application.practitioner.full_name }}</td></tr>
+          <tr><th class="text-muted">Licence</th><td><code>{{ application.practitioner.license_number }}</code></td></tr>
+          <tr><th class="text-muted">Specialty</th><td>{{ application.practitioner.specialty|default:"—" }}</td></tr>
+          <tr><th class="text-muted">Submitted</th><td>{{ application.submitted_at|date:"d M Y, H:i" }}</td></tr>
+          <tr><th class="text-muted">Status</th><td><span class="badge bg-{{ application.status_color }}">{{ application.get_status_display }}</span></td></tr>
+          <tr><th class="text-muted">Current employer</th><td>{{ application.current_employer|default:"—" }}</td></tr>
+          <tr><th class="text-muted">Work phone</th><td>{{ application.work_contact_phone|default:"—" }}</td></tr>
+          <tr><th class="text-muted">Work email</th><td>{{ application.work_email|default:"—" }}</td></tr>
+          <tr><th class="text-muted">Continuous practice</th><td>{{ application.has_practised_continuously|yesno:"Yes,No,—" }}</td></tr>
+          {% if application.has_practised_continuously == 'no' %}
+            <tr><th class="text-muted">Break reason</th><td>{{ application.practice_break_reason|default:"—" }}</td></tr>
+          {% endif %}
+          <tr><th class="text-muted">Malpractice history</th><td>{{ application.has_malpractice_history|yesno:"Yes,No,—" }}</td></tr>
+          {% if application.has_malpractice_history == 'yes' %}
+            <tr><th class="text-muted">Malpractice details</th><td>{{ application.malpractice_details|default:"—" }}</td></tr>
+          {% endif %}
+          {% if application.review_notes %}
+            <tr><th class="text-muted">Review notes</th><td>{{ application.review_notes }}</td></tr>
+          {% endif %}
+          {% if application.reviewed_by %}
+            <tr><th class="text-muted">Reviewed by</th><td>{{ application.reviewed_by.get_full_name|default:application.reviewed_by.username }} on {{ application.reviewed_at|date:"d M Y, H:i" }}</td></tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    {% if not is_locked %}
+      <div class="card shadow-sm border-primary mb-4">
+        <div class="card-header bg-primary text-white"><strong>Review decision</strong></div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            {% if form.review_notes.errors %}
+              <div class="alert alert-danger small">{{ form.review_notes.errors|join:", " }}</div>
+            {% endif %}
+            <div class="mb-3">
+              <label class="form-label small">Decision</label>
+              {{ form.decision }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">Review notes</label>
+              {{ form.review_notes }}
+              <div class="form-text">Optional notes explaining the decision.</div>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Submit decision</button>
+          </form>
+        </div>
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        <strong>Application {{ application.get_status_display|lower }}.</strong>
+        This application has already been reviewed and cannot be changed.
+      </div>
+    {% endif %}
+
+    <div class="card shadow-sm">
+      <div class="card-header bg-white"><strong>Practitioner details</strong></div>
+      <div class="card-body small">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th class="text-muted" style="width: 40%;">Full name</th><td>{{ application.practitioner.full_name }}</td></tr>
+          <tr><th class="text-muted">Licence number</th><td><code>{{ application.practitioner.license_number }}</code></td></tr>
+          <tr><th class="text-muted">Specialty</th><td>{{ application.practitioner.specialty|default:"—" }}</td></tr>
+          <tr><th class="text-muted">Licence expiry</th><td>{{ application.practitioner.license_expiry|date:"d M Y" }}</td></tr>
+          <tr><th class="text-muted">Indemnity expiry</th><td>{{ application.practitioner.indemnity_expiry|date:"d M Y" }}</td></tr>
+          <tr><th class="text-muted">CPD points</th><td>{{ application.practitioner.cpd_points }} <span class="text-muted">/ 50 minimum</span></td></tr>
+          <tr><th class="text-muted">Status</th><td><span class="badge bg-{{ application.practitioner.status_color }}">{{ application.practitioner.get_status_display }}</span></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

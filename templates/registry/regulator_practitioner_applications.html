@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Practitioner applications{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>Practitioner licence renewals</h1>
+    <p>Review and process practitioner renewal applications</p>
+  </div>
+  <a href="{% url 'regulator_applications' %}" class="btn btn-outline-primary">Facility applications</a>
+</div>
+
+<form class="row g-2 mb-4" method="get">
+  <div class="col-md-4">
+    <select name="status" class="form-select">
+      <option value="">All statuses</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-outline-primary w-100">Filter</button></div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th>Practitioner</th><th>Licence</th><th>Submitted</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for app in applications %}
+          <tr>
+            <td>{{ app.practitioner.full_name }}</td>
+            <td><code>{{ app.practitioner.license_number }}</code></td>
+            <td>{{ app.submitted_at|date:"d M Y" }}</td>
+            <td><span class="badge bg-{{ app.status_color }}">{{ app.get_status_display }}</span></td>
+            <td class="text-end">
+              <a href="{% url 'regulator_practitioner_application_review' app.pk %}" class="btn btn-sm btn-primary">Review</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-muted text-center py-4">No applications found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .decorators import role_required
 from .analytics import build_compliance_analytics
-from .application_services import approve_facility_application, reject_facility_application
+from .application_services import approve_facility_application, approve_practitioner_application, reject_facility_application, reject_practitioner_application
 from .forms import (
     CredibilityCheckForm,
     DocumentReviewForm,
@@ -91,14 +91,19 @@ def _regulator_dashboard(request):
     pending_documents = RegistryDocument.objects.filter(
         review_status=RegistryDocument.ReviewStatus.PENDING
     ).count()
-    pending_applications = FacilityApplication.objects.filter(
+    pending_facility_applications = FacilityApplication.objects.filter(
         status=FacilityApplication.ApplicationStatus.PENDING
+    ).count()
+    pending_practitioner_applications = PractitionerRenewalApplication.objects.filter(
+        status=PractitionerRenewalApplication.ApplicationStatus.PENDING
     ).count()
     ctx = {
         "practitioner_count": PractitionerProfile.objects.count(),
         "facility_count": HealthcareFacility.objects.count(),
         "pending_documents": pending_documents,
-        "pending_applications": pending_applications,
+        "pending_applications": pending_facility_applications + pending_practitioner_applications,
+        "pending_facility_applications": pending_facility_applications,
+        "pending_practitioner_applications": pending_practitioner_applications,
         "suspended_practitioners": PractitionerProfile.objects.filter(
             status__in=[LicenseStatus.SUSPENDED, LicenseStatus.REVOKED]
         ).count(),
@@ -500,6 +505,51 @@ def regulator_application_review(request, pk):
     return render(
         request,
         "registry/regulator_application_review.html",
+        {"application": application, "form": form, "is_locked": is_locked},
+    )
+
+
+@role_required(User.Role.REGULATOR)
+def regulator_practitioner_applications(request):
+    status_filter = request.GET.get("status", PractitionerRenewalApplication.ApplicationStatus.PENDING)
+    qs = PractitionerRenewalApplication.objects.select_related("practitioner", "reviewed_by").order_by("-submitted_at")
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    return render(
+        request,
+        "registry/regulator_practitioner_applications.html",
+        {
+            "applications": qs[:100],
+            "status_filter": status_filter,
+            "status_choices": PractitionerRenewalApplication.ApplicationStatus.choices,
+        },
+    )
+
+
+@role_required(User.Role.REGULATOR)
+def regulator_practitioner_application_review(request, pk):
+    application = get_object_or_404(
+        PractitionerRenewalApplication.objects.select_related("practitioner", "reviewed_by"),
+        pk=pk,
+    )
+    is_locked = application.status != PractitionerRenewalApplication.ApplicationStatus.PENDING
+    form = None
+    if not is_locked:
+        form = FacilityApplicationReviewForm(request.POST if request.method == "POST" else None)
+    if not is_locked and request.method == "POST" and form.is_valid():
+        decision = form.cleaned_data["decision"]
+        notes = form.cleaned_data.get("review_notes", "")
+        if decision == "approved":
+            approve_practitioner_application(application, request.user)
+            messages.success(request, "Practitioner renewal approved. Licence expiry extended.")
+        else:
+            reject_practitioner_application(application, request.user, notes)
+            messages.warning(request, "Practitioner renewal rejected.")
+        return redirect("regulator_practitioner_applications")
+
+    return render(
+        request,
+        "registry/regulator_practitioner_application_review.html",
         {"application": application, "form": form, "is_locked": is_locked},
     )
 

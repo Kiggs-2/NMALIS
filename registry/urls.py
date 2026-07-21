@@ -59,6 +59,16 @@ urlpatterns = [
         views.regulator_application_review,
         name="regulator_application_review",
     ),
+    path(
+        "regulator/practitioner-applications/",
+        views.regulator_practitioner_applications,
+        name="regulator_practitioner_applications",
+    ),
+    path(
+        "regulator/practitioner-applications/<int:pk>/",
+        views.regulator_practitioner_application_review,
+        name="regulator_practitioner_application_review",
+    ),
     path("regulator/audit/", views.audit_trail, name="audit_trail"),
     path(
         "certificates/practitioner/<int:pk>/download/",

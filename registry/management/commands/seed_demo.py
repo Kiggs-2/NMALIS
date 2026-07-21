@@ -1,12 +1,10 @@
 from datetime import timedelta
-
-from django.core.management.base import BaseCommand
-from django.utils import timezone
-
 from pathlib import Path
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from registry.models import (
     HealthcareFacility,
@@ -19,7 +17,7 @@ from registry.models import (
 
 
 class Command(BaseCommand):
-    help = "Load synthetic demo data for NMALIS (Dr. Sample, Test Clinic, etc.)"
+    help = "Load synthetic demo data for NMALIS (Dr. Sample, Test Clinic, SysAdmin, etc.)"
 
     def handle(self, *args, **options):
         today = timezone.now().date()
@@ -95,7 +93,7 @@ class Command(BaseCommand):
                     "first_name": p.full_name.split()[-1],
                 },
             )
-            if created:
+            if created or not user.check_password(password):
                 user.set_password(password)
                 user.save()
 
@@ -113,7 +111,23 @@ class Command(BaseCommand):
             defaults={"role_at_facility": "Visiting Surgeon", "is_active": True},
         )
 
-        regulator, created = User.objects.update_or_create(
+        # --- SEED SYSTEM ADMIN ---
+        sysadmin, _ = User.objects.update_or_create(
+            username="sysadmin",
+            defaults={
+                "role": User.Role.SYSTEM_ADMIN,
+                "email": "sysadmin@nmalis.ke",
+                "first_name": "System",
+                "last_name": "Administrator",
+                "is_staff": True,
+                "is_superuser": True,
+            },
+        )
+        sysadmin.set_password(password)
+        sysadmin.save()
+
+        # --- SEED REGULATOR ---
+        regulator, _ = User.objects.update_or_create(
             username="regulator",
             defaults={
                 "role": User.Role.REGULATOR,
@@ -121,11 +135,11 @@ class Command(BaseCommand):
                 "is_staff": True,
             },
         )
-        if created:
-            regulator.set_password(password)
-            regulator.save()
+        regulator.set_password(password)
+        regulator.save()
 
-        hospital_admin, created = User.objects.update_or_create(
+        # --- SEED HOSPITAL ADMIN ---
+        hospital_admin, _ = User.objects.update_or_create(
             username="hospital_admin",
             defaults={
                 "role": User.Role.HOSPITAL_ADMIN,
@@ -134,21 +148,20 @@ class Command(BaseCommand):
                 "personal_physician": sample,
             },
         )
-        if created:
-            hospital_admin.set_password(password)
-            hospital_admin.save()
-        else:
-            hospital_admin.personal_physician = sample
-            hospital_admin.save(update_fields=["personal_physician"])
+        hospital_admin.set_password(password)
+        hospital_admin.save()
 
         self._seed_documents(sample, suspended, facility, ghost_facility, today)
 
-        self.stdout.write(self.style.SUCCESS("Demo data loaded."))
-        self.stdout.write("Login: regulator / hospital_admin / doctor_sample")
-        self.stdout.write(f"Password: {password}")
-        self.stdout.write(f"Verify ghost clinic: {ghost_facility.registration_number}")
-        self.stdout.write(f"Verify Dr. Sample: {sample.license_number}")
-        self.stdout.write("Regulator: Documents menu for license verification")
+        self.stdout.write(self.style.SUCCESS("Demo data loaded successfully."))
+        self.stdout.write("--------------------------------------------------")
+        self.stdout.write(f"Default Login Password: {password}")
+        self.stdout.write("Available Accounts:")
+        self.stdout.write("  - sysadmin       (System Admin)")
+        self.stdout.write("  - regulator      (Regulator / KMPDC)")
+        self.stdout.write("  - hospital_admin (Hospital Admin)")
+        self.stdout.write("  - doctor_sample  (Practitioner)")
+        self.stdout.write("--------------------------------------------------")
 
     def _seed_documents(self, sample, suspended, facility, ghost_facility, today):
         from registry.models import StatusChangeLog
@@ -156,9 +169,7 @@ class Command(BaseCommand):
         media_root = Path(settings.MEDIA_ROOT)
         media_root.mkdir(parents=True, exist_ok=True)
 
-        demo_pdf = (
-            b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
-        )
+        demo_pdf = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
 
         docs = [
             {
@@ -255,7 +266,6 @@ class Command(BaseCommand):
             if not doc.file:
                 doc.file.save(filename, ContentFile(demo_pdf), save=True)
 
-        # Seed some status change logs
         regulator = User.objects.filter(role=User.Role.REGULATOR).first()
         if regulator:
             StatusChangeLog.objects.get_or_create(

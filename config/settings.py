@@ -141,9 +141,9 @@ CPD_RENEWAL_THRESHOLD = 50
 
 # Renewal fees in KES. Override by setting the corresponding environment variable
 # in the .env file, then restart the Django server.
-RENEWAL_FEE = int(os.getenv("RENEWAL_FEE", "1000"))
-FACILITY_RENEWAL_FEE = int(os.getenv("FACILITY_RENEWAL_FEE", "2000"))
-SERVICES_UPDATE_FEE = int(os.getenv("SERVICES_UPDATE_FEE", "1500"))
+RENEWAL_FEE = int(os.getenv("RENEWAL_FEE", "0"))
+FACILITY_RENEWAL_FEE = int(os.getenv("FACILITY_RENEWAL_FEE", "0"))
+SERVICES_UPDATE_FEE = int(os.getenv("SERVICES_UPDATE_FEE", "0"))
 
 MPESA_ENV = os.getenv("MPESA_ENV", "sandbox")
 MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY", "")
@@ -152,6 +152,9 @@ MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE", "")
 MPESA_PASSKEY = os.getenv("MPESA_PASSKEY", "")
 MPESA_CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL", "")
 
+FACILITY_RENEWAL_FEE = int(os.getenv("FACILITY_RENEWAL_FEE", 2000))
+SERVICES_UPDATE_FEE = int(os.getenv("SERVICES_UPDATE_FEE", 1500))
+RENEWAL_FEE = int(os.getenv("RENEWAL_FEE", 1000))
 # Session idle timeout — 1 hour of inactivity logs out user
 SESSION_IDLE_TIMEOUT_SECONDS = 3600
 SESSION_IDLE_TIMEOUT_EXEMPT = ["/admin/", "/sysadmin/"]
@@ -166,7 +169,7 @@ EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "nmalis@kabarak.edu.ke")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "cypriankigen@gmail.com")
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "True").lower() in ("true", "1", "yes")

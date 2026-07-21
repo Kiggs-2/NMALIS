@@ -14,6 +14,12 @@
     <div class="card stat-card border-primary"><div class="card-body"><div class="stat-value text-primary">{{ pending_documents }}</div><div class="stat-label"><a href="{% url 'regulator_documents' %}" class="text-decoration-none">Documents pending</a></div></div></div>
   </div>
   <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-warning"><div class="card-body"><div class="stat-value text-warning">{{ pending_facility_applications }}</div><div class="stat-label"><a href="{% url 'regulator_applications' %}" class="text-decoration-none">Facility applications</a></div></div></div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-info"><div class="card-body"><div class="stat-value text-info">{{ pending_practitioner_applications }}</div><div class="stat-label"><a href="{% url 'regulator_practitioner_applications' %}" class="text-decoration-none">Practitioner applications</a></div></div></div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
     <div class="card stat-card"><div class="card-body"><div class="stat-value">{{ practitioner_count }}</div><div class="stat-label">Practitioners</div></div></div>
   </div>
   <div class="col-sm-6 col-xl-3">

@@ -387,12 +387,31 @@ class FacilityApplication(models.Model):
 
 class PractitionerRenewalApplication(models.Model):
     """Stores renewal application form data submitted by a practitioner."""
+    class ApplicationStatus(models.TextChoices):
+        PENDING = "pending", "Pending regulator review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
     practitioner = models.ForeignKey(
         PractitionerProfile,
         on_delete=models.CASCADE,
         related_name="renewal_applications",
     )
     submitted_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(
+        max_length=16,
+        choices=ApplicationStatus.choices,
+        default=ApplicationStatus.PENDING,
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_practitioner_applications",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True)
 
     # Renewal form fields
     current_employer = models.CharField(max_length=255, blank=True)
@@ -409,6 +428,14 @@ class PractitionerRenewalApplication(models.Model):
 
     def __str__(self):
         return f"Renewal by {self.practitioner} @ {self.submitted_at.date()}"
+
+    @property
+    def status_color(self):
+        return {
+            self.ApplicationStatus.PENDING: "warning",
+            self.ApplicationStatus.APPROVED: "success",
+            self.ApplicationStatus.REJECTED: "danger",
+        }.get(self.status, "secondary")
 
 
 class PractitionerRenewalPayment(models.Model):

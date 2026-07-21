@@ -233,3 +233,30 @@ class Command(BaseCommand):
         self.stdout.write(f"Facilities: {len(facilities)} | Practitioners: {len(practitioners)}")
         self.stdout.write("Login: regulator / hospital_admin / doctor_sample / doctor_01 … doctor_15")
         self.stdout.write(f"Password: {password}")
+# --- SEED SYSTEM ADMIN ---
+sysadmin, created = User.objects.update_or_create(
+    username="sysadmin",
+    defaults={
+        "role": User.Role.SYSTEM_ADMIN,
+        "email": "sysadmin@nmalis.ke",
+        "first_name": "System",
+        "last_name": "Administrator",
+        "is_staff": True,
+        "is_superuser": True,
+    },
+)
+if created or not sysadmin.check_password(password):
+    sysadmin.set_password(password)
+    sysadmin.save()
+
+    self.stdout.write(self.style.SUCCESS("Large demo dataset loaded successfully."))
+self.stdout.write(f"Facilities: {len(facilities)} | Practitioners: {len(practitioners)}")
+self.stdout.write("--------------------------------------------------")
+self.stdout.write(f"Default Login Password: {password}")
+self.stdout.write("Available Accounts:")
+self.stdout.write("  - sysadmin         (System Admin / Superuser)")
+self.stdout.write("  - regulator        (Regulator / KMPDC)")
+self.stdout.write("  - hospital_admin   (Hospital Admin)")
+self.stdout.write("  - doctor_sample    (Practitioner)")
+self.stdout.write("  - doctor_02 ... doctor_15")
+self.stdout.write("--------------------------------------------------")

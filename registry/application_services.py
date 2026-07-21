@@ -1,9 +1,12 @@
+from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
 from .models import (
     ComplianceAlert,
     FacilityApplication,
     HealthcareFacility,
+    PractitionerProfile,
+    PractitionerRenewalApplication,
     RegistryDocument,
     User,
 )
@@ -74,4 +77,52 @@ def _notify_facility_admins(facility: HealthcareFacility, title: str, message: s
             title=title,
             message=message,
             related_facility=facility,
+        )
+
+
+def approve_practitioner_application(application: PractitionerRenewalApplication, regulator):
+    application.status = PractitionerRenewalApplication.ApplicationStatus.APPROVED
+    application.reviewed_by = regulator
+    application.reviewed_at = timezone.now()
+    application.save(update_fields=["status", "reviewed_by", "reviewed_at", "updated_at"])
+
+    profile = application.practitioner
+    today = timezone.now().date()
+    if profile.license_expiry < today:
+        profile.license_expiry = today
+    profile.license_expiry = profile.license_expiry + relativedelta(years=1)
+    profile.save(update_fields=["license_expiry", "updated_at"])
+
+    refresh_subject_statuses(triggered_by=regulator)
+    _notify_practitioner(
+        profile,
+        "Practitioner licence renewal approved",
+        "Your renewal application was approved. Your licence expiry has been extended.",
+    )
+
+
+def reject_practitioner_application(application: PractitionerRenewalApplication, regulator, notes: str):
+    application.status = PractitionerRenewalApplication.ApplicationStatus.REJECTED
+    application.review_notes = notes
+    application.reviewed_by = regulator
+    application.reviewed_at = timezone.now()
+    application.save(
+        update_fields=["status", "review_notes", "reviewed_by", "reviewed_at", "updated_at"]
+    )
+    _notify_practitioner(
+        application.practitioner,
+        "Practitioner licence renewal rejected",
+        notes or "Your renewal application was rejected. Contact KMPDC for guidance.",
+    )
+
+
+def _notify_practitioner(practitioner: PractitionerProfile, title: str, message: str):
+    user_account = practitioner.user_account
+    if user_account:
+        ComplianceAlert.objects.create(
+            alert_type=ComplianceAlert.AlertType.STATUS_CHANGED,
+            recipient=user_account,
+            title=title,
+            message=message,
+            related_practitioner=practitioner,
         )

@@ -27,6 +27,8 @@
             {% elif user.role == 'regulator' %}
               <li class="nav-item"><a class="nav-link" href="{% url 'compliance_analytics' %}">Analytics</a></li>
               <li class="nav-item"><a class="nav-link" href="{% url 'regulator_documents' %}">Documents</a></li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'regulator_practitioner_applications' %}">Practitioner applications</a></li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'regulator_applications' %}">Facility applications</a></li>
               <li class="nav-item"><a class="nav-link" href="{% url 'regulator_practitioners' %}">Practitioners</a></li>
               <li class="nav-item"><a class="nav-link" href="{% url 'regulator_facilities' %}">Facilities</a></li>
               <li class="nav-item"><a class="nav-link" href="{% url 'regulator_account' %}">Profile</a></li>
