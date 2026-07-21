@@ -1,2 +1,613 @@
 [
+    
+{
+  "model": "sessions.session",
+  "pk": "6c67spu0xndc47o22iqryzxjjo418q5s",
+  "fields": {
+    "session_data": ".eJxVjL0OgjAURt-lq9LcXtpe2tHdzZ30D0EJJFBMjPHdLYmDrt8533mx1m25b7c1Le0QmWWaHX8378I9TTuINzddZx7mKS-D57vCv3Tl5zmm8fR1_wK9W_vylk2KHnWIpsbOgMKERBI86Qi1TIqowaYj7Bxg0l6aThXRk6sjCKlDiY5uza0LeXgM-VmSCKgroArFRUgLwkrDTU2KxAHAArD3B0lpRDo:1wmB2b:KvVOeRxH2QEVv-B4fUkvBliz6bZMfK49CZi-Htcztz4",
+    "expire_date": "2026-08-04T14:01:49.937Z"
+  }
+},
+{
+  "model": "registry.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$TWzXgnbj6OXtqy93DmhPZM$G9Ngu862ATosJwHns1uNuhP5P8Gnw43umncq29RD2As=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "doctor_sample",
+    "first_name": "Mwangi",
+    "last_name": "",
+    "email": "doctor_sample@demo.nmalis.ke",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-21T13:58:01.072Z",
+    "role": "practitioner",
+    "facility": null,
+    "practitioner_profile": 1,
+    "personal_physician": null,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "registry.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$jIg6DVaNhefvFUDYituaJr$G/R1oGY597ryv6Ko+YO9mE+GYNBcyqEmkXOrUtUrz4o=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "doctor_pending",
+    "first_name": "Otieno",
+    "last_name": "",
+    "email": "doctor_pending@demo.nmalis.ke",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-21T13:58:01.240Z",
+    "role": "practitioner",
+    "facility": null,
+    "practitioner_profile": 2,
+    "personal_physician": null,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "registry.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$5M7VTCOM0lbVbq7nEaFNTP$LHM9j/+gVQRQsUeb+aOfQYbQWAaYc69gq8gMjtOyuw8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "doctor_suspended",
+    "first_name": "Kariuki",
+    "last_name": "",
+    "email": "doctor_suspended@demo.nmalis.ke",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-21T13:58:01.404Z",
+    "role": "practitioner",
+    "facility": null,
+    "practitioner_profile": 3,
+    "personal_physician": null,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "registry.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$cIVPBKd3XHYeGouCfYzRWQ$bwerplRLNybBceajAXc7ZoHjfrx8eXI6CjAA8KuV93U=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "regulator",
+    "first_name": "",
+    "last_name": "",
+    "email": "regulator@kmpdc.demo.ke",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-07-21T13:58:01.571Z",
+    "role": "regulator",
+    "facility": null,
+    "practitioner_profile": null,
+    "personal_physician": null,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "registry.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$CUogovv3WDxPUuCyqxW4DI$9167gYxiAcsMwWiciTJ2Qb/m6Nj5Zvo2XLaXodeenQI=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "hospital_admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@test-hospital.demo.ke",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-21T13:58:01.720Z",
+    "role": "hospital_admin",
+    "facility": 1,
+    "practitioner_profile": null,
+    "personal_physician": 1,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "registry.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$zWB7BEDkge9xL00efNLlmt$wIzs6gHY6g5P2mFE8zpmEheT+PxyxGZU4IXodqPWKOk=",
+    "last_login": "2026-07-21T14:01:49.567Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@nmalis.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-07-21T13:59:09.920Z",
+    "role": "system_admin",
+    "facility": null,
+    "practitioner_profile": null,
+    "personal_physician": null,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "registry.healthcarefacility",
+  "pk": 1,
+  "fields": {
+    "registration_number": "FAC-KEN-001",
+    "name": "Kabarak University Teaching Hospital (Demo)",
+    "county": "Nakuru",
+    "services_offered": "General Medicine, Surgery, Maternity",
+    "status": "active",
+    "accreditation_expiry": "2027-07-21",
+    "created_at": "2026-07-21T13:58:01.035Z",
+    "updated_at": "2026-07-21T13:58:01.035Z"
+  }
+},
+{
+  "model": "registry.healthcarefacility",
+  "pk": 2,
+  "fields": {
+    "registration_number": "FAC-GHOST-999",
+    "name": "Unaccredited Test Clinic",
+    "county": "Nairobi",
+    "services_offered": "Outpatient",
+    "status": "suspended",
+    "accreditation_expiry": "2026-06-21",
+    "created_at": "2026-07-21T13:58:01.049Z",
+    "updated_at": "2026-07-21T13:58:01.049Z"
+  }
+},
+{
+  "model": "registry.practitionerprofile",
+  "pk": 1,
+  "fields": {
+    "license_number": "KMP-2024-001",
+    "full_name": "Dr. Sample A Mwangi",
+    "specialty": "General Practice",
+    "status": "active",
+    "license_expiry": "2027-02-06",
+    "indemnity_expiry": "2027-02-06",
+    "cpd_points": 55,
+    "created_at": "2026-07-21T13:58:01.062Z",
+    "updated_at": "2026-07-21T13:58:01.062Z"
+  }
+},
+{
+  "model": "registry.practitionerprofile",
+  "pk": 2,
+  "fields": {
+    "license_number": "KMP-2023-442",
+    "full_name": "Dr. Sample B Otieno",
+    "specialty": "Paediatrics",
+    "status": "pending_renewal",
+    "license_expiry": "2026-09-19",
+    "indemnity_expiry": "2026-10-19",
+    "cpd_points": 35,
+    "created_at": "2026-07-21T13:58:01.228Z",
+    "updated_at": "2026-07-21T13:58:01.228Z"
+  }
+},
+{
+  "model": "registry.practitionerprofile",
+  "pk": 3,
+  "fields": {
+    "license_number": "KMP-2022-118",
+    "full_name": "Dr. Sample C Kariuki",
+    "specialty": "Surgery",
+    "status": "suspended",
+    "license_expiry": "2026-10-29",
+    "indemnity_expiry": "2026-10-29",
+    "cpd_points": 60,
+    "created_at": "2026-07-21T13:58:01.394Z",
+    "updated_at": "2026-07-21T13:58:01.394Z"
+  }
+},
+{
+  "model": "registry.staffaffiliation",
+  "pk": 1,
+  "fields": {
+    "practitioner": 1,
+    "facility": 1,
+    "role_at_facility": "Consultant",
+    "start_date": "2026-07-21",
+    "end_date": null,
+    "is_active": true
+  }
+},
+{
+  "model": "registry.staffaffiliation",
+  "pk": 2,
+  "fields": {
+    "practitioner": 3,
+    "facility": 1,
+    "role_at_facility": "Visiting Surgeon",
+    "start_date": "2026-07-21",
+    "end_date": null,
+    "is_active": true
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 1,
+  "fields": {
+    "document_type": "practitioner_license",
+    "title": "Annual Practising License 2024",
+    "reference_number": "KMP-2024-001-LIC",
+    "file": "registry_documents/2026/07/09_Annual_Practising_License_2024.pdf",
+    "practitioner": 1,
+    "facility": null,
+    "review_status": "verified",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:01.875Z",
+    "expires_on": "2027-02-06"
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 2,
+  "fields": {
+    "document_type": "professional_indemnity",
+    "title": "Professional Indemnity Cover — 2025",
+    "reference_number": "IND-KMP-2024-001",
+    "file": "registry_documents/2026/07/08_Professional_Indemnity_Cover_2025.pdf",
+    "practitioner": 1,
+    "facility": null,
+    "review_status": "verified",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:01.895Z",
+    "expires_on": "2027-02-06"
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 3,
+  "fields": {
+    "document_type": "cpd_certificate",
+    "title": "CPD Completion Certificate — 40 Points",
+    "reference_number": "CPD-2025-SAMPLE",
+    "file": "registry_documents/2026/07/07_CPD_Completion_Certificate_40Points.pdf",
+    "practitioner": 1,
+    "facility": null,
+    "review_status": "verified",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:01.915Z",
+    "expires_on": "2027-07-21"
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 4,
+  "fields": {
+    "document_type": "internship_certificate",
+    "title": "Internship Completion Certificate",
+    "reference_number": "INT-KMP-2024-001",
+    "file": "registry_documents/2026/07/06_Internship_Completion_Certificate.pdf",
+    "practitioner": 1,
+    "facility": null,
+    "review_status": "verified",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:01.936Z",
+    "expires_on": null
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 5,
+  "fields": {
+    "document_type": "practitioner_license",
+    "title": "Practising License (under review)",
+    "reference_number": "KMP-2022-118",
+    "file": "registry_documents/2026/07/05_Practising_License_Under_Review.pdf",
+    "practitioner": 3,
+    "facility": null,
+    "review_status": "pending",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:01.956Z",
+    "expires_on": "2026-10-29"
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 6,
+  "fields": {
+    "document_type": "professional_indemnity",
+    "title": "Professional Indemnity (expired)",
+    "reference_number": "IND-KMP-2022-118",
+    "file": "registry_documents/2026/07/04_Professional_Indemnity_Expired.pdf",
+    "practitioner": 3,
+    "facility": null,
+    "review_status": "rejected",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:01.972Z",
+    "expires_on": "2026-06-21"
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 7,
+  "fields": {
+    "document_type": "facility_accreditation",
+    "title": "Facility Accreditation Certificate — Level 5",
+    "reference_number": "FAC-KEN-001-ACC",
+    "file": "registry_documents/2026/07/03_Facility_Accreditation_Certificate_Level5.pdf",
+    "practitioner": null,
+    "facility": 1,
+    "review_status": "verified",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:01.993Z",
+    "expires_on": "2027-07-21"
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 8,
+  "fields": {
+    "document_type": "other",
+    "title": "Health Inspectorate Compliance Report 2025",
+    "reference_number": "HIC-FAC-KEN-001",
+    "file": "registry_documents/2026/07/02_Health_Inspectorate_Compliance_Report_2025.pdf",
+    "practitioner": null,
+    "facility": 1,
+    "review_status": "verified",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:02.014Z",
+    "expires_on": "2027-01-17"
+  }
+},
+{
+  "model": "registry.registrydocument",
+  "pk": 9,
+  "fields": {
+    "document_type": "facility_accreditation",
+    "title": "Expired accreditation submission",
+    "reference_number": "FAC-GHOST-999",
+    "file": "registry_documents/2026/07/01_Expired_Accreditation_Submission.pdf",
+    "practitioner": null,
+    "facility": 2,
+    "review_status": "rejected",
+    "review_notes": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "submitted_at": "2026-07-21T13:58:02.031Z",
+    "expires_on": "2026-06-21"
+  }
+},
+{
+  "model": "registry.statuschangelog",
+  "pk": 1,
+  "fields": {
+    "entity_type": "practitioner",
+    "entity_id": 1,
+    "entity_label": "Dr. Sample A Mwangi (KMP-2024-001)",
+    "old_status": "pending_renewal",
+    "new_status": "active",
+    "reason": "Automatic compliance check: all documents verified and expiry dates valid.",
+    "accountability_confirmed": false,
+    "accountability_statement": "",
+    "changed_by": [
+      "regulator"
+    ],
+    "created_at": "2026-07-21T13:58:02.059Z"
+  }
+},
+{
+  "model": "registry.statuschangelog",
+  "pk": 2,
+  "fields": {
+    "entity_type": "practitioner",
+    "entity_id": 3,
+    "entity_label": "Dr. Sample C Kariuki (KMP-2022-118)",
+    "old_status": "active",
+    "new_status": "suspended",
+    "reason": "Document rejected: Professional Indemnity certificate expired.",
+    "accountability_confirmed": true,
+    "accountability_statement": "",
+    "changed_by": [
+      "regulator"
+    ],
+    "created_at": "2026-07-21T13:58:02.067Z"
+  }
+},
+{
+  "model": "registry.statuschangelog",
+  "pk": 3,
+  "fields": {
+    "entity_type": "facility",
+    "entity_id": 2,
+    "entity_label": "Unaccredited Test Clinic (FAC-GHOST-999)",
+    "old_status": "active",
+    "new_status": "suspended",
+    "reason": "Accreditation expired and renewal rejected — facility does not meet minimum standards.",
+    "accountability_confirmed": true,
+    "accountability_statement": "",
+    "changed_by": [
+      "regulator"
+    ],
+    "created_at": "2026-07-21T13:58:02.078Z"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 1,
+  "fields": {
+    "action_time": "2026-07-21T14:03:35.371Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "9",
+    "object_repr": "Expired accreditation submission (Rejected)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 2,
+  "fields": {
+    "action_time": "2026-07-21T14:04:05.290Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "8",
+    "object_repr": "Health Inspectorate Compliance Report 2025 (Verified)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 3,
+  "fields": {
+    "action_time": "2026-07-21T14:04:20.464Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "7",
+    "object_repr": "Facility Accreditation Certificate — Level 5 (Verified)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 4,
+  "fields": {
+    "action_time": "2026-07-21T14:04:37.645Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "5",
+    "object_repr": "Practising License (under review) (Pending review)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 5,
+  "fields": {
+    "action_time": "2026-07-21T14:04:54.362Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "6",
+    "object_repr": "Professional Indemnity (expired) (Rejected)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 6,
+  "fields": {
+    "action_time": "2026-07-21T14:05:10.414Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "4",
+    "object_repr": "Internship Completion Certificate (Verified)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 7,
+  "fields": {
+    "action_time": "2026-07-21T14:05:34.537Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "3",
+    "object_repr": "CPD Completion Certificate — 40 Points (Verified)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 8,
+  "fields": {
+    "action_time": "2026-07-21T14:05:51.297Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "2",
+    "object_repr": "Professional Indemnity Cover — 2025 (Verified)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 9,
+  "fields": {
+    "action_time": "2026-07-21T14:06:16.875Z",
+    "user": [
+      "admin"
+    ],
+    "content_type": [
+      "registry",
+      "registrydocument"
+    ],
+    "object_id": "1",
+    "object_repr": "Annual Practising License 2024 (Verified)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"File\"]}}]"
+  }
+}
+
 ]
