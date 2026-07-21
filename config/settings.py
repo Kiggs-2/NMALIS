@@ -180,3 +180,6 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Tell WhiteNoise where to gather static files from
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Allow the app to render its own pages/PDFs inside iframes
+X_FRAME_OPTIONS = 'SAMEORIGIN'
