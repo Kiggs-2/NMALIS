@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load registry_extras %}
 {% block title %}My facility{% endblock %}
 {% block content %}
 <div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
@@ -13,7 +14,16 @@
 
 <div class="card shadow-sm mb-4 border-primary">
   <div class="card-body d-flex flex-wrap gap-2 align-items-center">
-    <a href="{% url 'hospital_apply_licence' %}" class="btn btn-primary">Renew / apply for licence</a>
+    {% if renewal_window.can_renew %}
+      <a href="{% url 'hospital_apply_licence' %}" class="btn btn-primary">Renew / apply for licence</a>
+    {% else %}
+      <span class="btn btn-primary disabled" tabindex="-1" aria-disabled="true">Renew / apply for licence</span>
+      {% if renewal_window.days_to_expiry is not None %}
+        <span class="text-muted small">Available in {{ renewal_window.days_to_expiry|add:"-30" }} days ({{ renewal_window.days_to_expiry }} days to expiry)</span>
+      {% else %}
+        <span class="text-muted small">No expiry date set</span>
+      {% endif %}
+    {% endif %}
     <a href="{% url 'hospital_apply_services' %}" class="btn btn-outline-primary">Apply to update services</a>
     <a href="{% url 'hospital_staff_registry' %}" class="btn btn-outline-secondary">Staff registry</a>
     {% if pending_applications %}

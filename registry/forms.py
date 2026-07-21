@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+
 from .models import FacilityApplication, HealthcareFacility, RegistryDocument, User
 
 KMPDC_FORM_WIDGETS = {
@@ -24,14 +25,14 @@ KMPDC_FORM_WIDGETS = {
     "declaration_agreed": forms.CheckboxInput(attrs={"class": "form-check-input"}),
 }
 
+
 class FacilityLicenceApplicationForm(forms.ModelForm):
     class Meta:
         model = FacilityApplication
         fields = [
             "facility_legal_name", "registration_number", "county", "physical_address",
             "postal_address", "telephone", "email", "director_name", "bed_capacity",
-            "services_requested", "accreditation_sought_until", "supporting_file",
-            "declaration_agreed",
+            "services_requested", "accreditation_sought_until", "supporting_file", "declaration_agreed",
         ]
         widgets = KMPDC_FORM_WIDGETS
         labels = {
@@ -48,14 +49,14 @@ class FacilityLicenceApplicationForm(forms.ModelForm):
             raise forms.ValidationError("You must accept the declaration to submit.")
         return True
 
+
 class FacilityServicesUpdateForm(forms.ModelForm):
     class Meta:
         model = FacilityApplication
         fields = [
             "facility_legal_name", "registration_number", "county", "physical_address",
             "postal_address", "telephone", "email", "director_name", "bed_capacity",
-            "services_requested", "accreditation_sought_until", "supporting_file",
-            "declaration_agreed",
+            "services_requested", "accreditation_sought_until", "supporting_file", "declaration_agreed",
         ]
         widgets = KMPDC_FORM_WIDGETS
         labels = {
@@ -69,6 +70,7 @@ class FacilityServicesUpdateForm(forms.ModelForm):
             raise forms.ValidationError("You must accept the declaration to submit.")
         return True
 
+
 class FacilityApplicationReviewForm(forms.Form):
     decision = forms.ChoiceField(
         label="Decision",
@@ -76,40 +78,36 @@ class FacilityApplicationReviewForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-select"}),
     )
     review_notes = forms.CharField(
-        label="Review notes",
-        required=False,
+        label="Review notes", required=False,
         widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
     )
 
+
 class LoginForm(AuthenticationForm):
     username = forms.CharField(
-        widget=forms.TextInput(
-            attrs={"class": "form-control", "placeholder": "Username", "autocomplete": "username"}
-        )
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Username", "autocomplete": "username"}),
     )
     password = forms.CharField(
         widget=forms.PasswordInput(
             attrs={"class": "form-control", "placeholder": "Password", "autocomplete": "current-password"}
-        )
+        ),
     )
+
 
 class CredibilityCheckForm(forms.Form):
     identifier = forms.CharField(
-        label="License or registration number",
-        max_length=64,
+        label="License or registration number", max_length=64,
         widget=forms.TextInput(
-            attrs={
-                "class": "form-control",
-                "placeholder": "e.g. KMP-2024-001 or FAC-KEN-001",
-                "autocomplete": "off",
-            }
-        )
+            attrs={"class": "form-control", "placeholder": "e.g. KMP-2024-001 or FAC-KEN-001", "autocomplete": "off"}
+        ),
     )
+
 
 ACCOUNTABILITY_STATEMENT = (
     "I confirm that I have reviewed the supporting records and accept personal "
     "accountability for this regulatory action under KMPDC procedures."
 )
+
 
 class DocumentReviewForm(forms.Form):
     review_status = forms.ChoiceField(
@@ -121,15 +119,14 @@ class DocumentReviewForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-select"}),
     )
     review_notes = forms.CharField(
-        label="Review notes",
-        required=False,
+        label="Review notes", required=False,
         widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
     )
     accountability_acknowledged = forms.BooleanField(
-        label=ACCOUNTABILITY_STATEMENT,
-        required=True,
+        label=ACCOUNTABILITY_STATEMENT, required=True,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+
 
 class FacilityRenewalForm(forms.ModelForm):
     class Meta:
@@ -142,30 +139,26 @@ class FacilityRenewalForm(forms.ModelForm):
             )
         }
 
+
 class PractitionerLicenceRenewalForm(forms.Form):
     """Practitioner licence renewal with renewal form data and document upload."""
+    # Renewal form fields
     current_employer = forms.CharField(
         label="Current employer / practice name",
         required=False,
         max_length=255,
-        widget=forms.TextInput(
-            attrs={"class": "form-control", "placeholder": "e.g. Kenyatta National Hospital"}
-        )
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Kenyatta National Hospital"}),
     )
     work_contact_phone = forms.CharField(
         label="Work contact phone",
         required=False,
         max_length=32,
-        widget=forms.TextInput(
-            attrs={"class": "form-control", "placeholder": "e.g. 0712 345 678"}
-        )
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. 0712 345 678"}),
     )
     work_email = forms.EmailField(
         label="Work email address",
         required=False,
-        widget=forms.EmailInput(
-            attrs={"class": "form-control", "placeholder": "you@practice.co.ke"}
-        )
+        widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "you@practice.co.ke"}),
     )
     has_practised_continuously = forms.ChoiceField(
         label="Have you practised continuously since last renewal?",
@@ -177,9 +170,7 @@ class PractitionerLicenceRenewalForm(forms.Form):
         label="If you took a break, provide details",
         required=False,
         max_length=500,
-        widget=forms.Textarea(
-            attrs={"class": "form-control", "rows": 2, "placeholder": "Optional: maternity, study, career break, etc."}
-        )
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 2, "placeholder": "Optional: maternity, study, career break, etc."}),
     )
     has_malpractice_history = forms.ChoiceField(
         label="Any adverse findings, disciplinary action, or malpractice claims since last renewal?",
@@ -191,31 +182,27 @@ class PractitionerLicenceRenewalForm(forms.Form):
         label="Details of disciplinary action or malpractice claims",
         required=False,
         max_length=1000,
-        widget=forms.Textarea(
-            attrs={"class": "form-control", "rows": 2, "placeholder": "Optional: describe any actions taken against you..."}
-        )
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 2, "placeholder": "Optional: describe any actions taken against you..."}),
     )
+
+    # Document upload fields
     indemnity_file = forms.FileField(
         label="Upload current Professional Indemnity certificate (PDF)",
         required=False,
-        widget=forms.FileInput(
-            attrs={"class": "form-control", "accept": ".pdf,.jpg,.png"}
-        )
+        widget=forms.FileInput(attrs={"class": "form-control", "accept": ".pdf,.jpg,.png"}),
     )
     cpd_certificate_file = forms.FileField(
         label="Upload latest CPD certificate (PDF)",
         required=False,
-        widget=forms.FileInput(
-            attrs={"class": "form-control", "accept": ".pdf,.jpg,.png"}
-        )
+        widget=forms.FileInput(attrs={"class": "form-control", "accept": ".pdf,.jpg,.png"}),
     )
     licence_renewal_file = forms.FileField(
         label="Upload any supporting licence renewal document",
         required=False,
-        widget=forms.FileInput(
-            attrs={"class": "form-control", "accept": ".pdf,.jpg,.png"}
-        )
+        widget=forms.FileInput(attrs={"class": "form-control", "accept": ".pdf,.jpg,.png"}),
     )
+
+    # Declaration
     declaration_agreed = forms.BooleanField(
         label=(
             "I declare that the information provided and the uploaded documents "
@@ -224,3 +211,9 @@ class PractitionerLicenceRenewalForm(forms.Form):
         required=True,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+
+
+class NMALISUserCreationForm(UserCreationForm):
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ("username", "role", "email")

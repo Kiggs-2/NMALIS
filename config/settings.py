@@ -125,8 +125,20 @@ MESSAGE_TAGS = {
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "home"
-
 CPD_RENEWAL_THRESHOLD = 50
+
+# Renewal fees in KES. Override by setting the corresponding environment variable
+# in the .env file, then restart the Django server.
+RENEWAL_FEE = int(os.getenv("RENEWAL_FEE", "1000"))
+FACILITY_RENEWAL_FEE = int(os.getenv("FACILITY_RENEWAL_FEE", "2000"))
+SERVICES_UPDATE_FEE = int(os.getenv("SERVICES_UPDATE_FEE", "1500"))
+
+MPESA_ENV = os.getenv("MPESA_ENV", "sandbox")
+MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY", "")
+MPESA_CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET", "")
+MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE", "")
+MPESA_PASSKEY = os.getenv("MPESA_PASSKEY", "")
+MPESA_CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL", "")
 
 # Session idle timeout — 1 hour of inactivity logs out user
 SESSION_IDLE_TIMEOUT_SECONDS = 3600

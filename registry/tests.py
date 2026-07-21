@@ -6,7 +6,14 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from registry.models import HealthcareFacility, LicenseStatus, PractitionerProfile, RegistryDocument
+from registry.models import (
+    FacilityApplication,
+    FacilityRenewalPayment,
+    HealthcareFacility,
+    LicenseStatus,
+    PractitionerProfile,
+    RegistryDocument,
+)
 from registry.services import verify_practitioner
 
 User = get_user_model()
@@ -16,16 +23,16 @@ class NMALISTests(TestCase):
     def setUp(self):
         today = timezone.now().date()
         self.facility = HealthcareFacility.objects.create(
-            registration_number="FAC-T-001",
-            name="Test Hospital",
-            county="Test",
+            registration_number="FAC-NBI-2024-001",
+            name="Nairobi Medical Centre",
+            county="Nairobi",
             status=LicenseStatus.ACTIVE,
             accreditation_expiry=today + timedelta(days=365),
         )
         self.practitioner = PractitionerProfile.objects.create(
-            license_number="KMP-T-001",
-            full_name="Dr. Test User",
-            specialty="GP",
+            license_number="KMP-2024-1042",
+            full_name="Dr. Jane Mwangi",
+            specialty="General Practice",
             status=LicenseStatus.ACTIVE,
             license_expiry=today + timedelta(days=100),
             indemnity_expiry=today + timedelta(days=100),
@@ -39,20 +46,20 @@ class NMALISTests(TestCase):
         )
 
     def test_credibility_check_logs_and_returns_found(self):
-        verify_practitioner("KMP-T-001", self.admin_user)
+        verify_practitioner("KMP-2024-1042", self.admin_user)
         self.assertEqual(self.admin_user.verification_checks.count(), 1)
 
     def test_verify_doctor_post_requires_login(self):
         url = reverse("verify_doctor")
-        r = self.client.post(url, {"identifier": "KMP-T-001"})
+        r = self.client.post(url, {"identifier": "KMP-2024-1042"})
         self.assertEqual(r.status_code, 302)
 
     def test_verify_doctor_flow(self):
         self.client.login(username="t_admin", password="pass12345")
         url = reverse("verify_doctor")
-        r = self.client.post(url, {"identifier": " KMP-T-001 "})
+        r = self.client.post(url, {"identifier": " KMP-2024-1042 "})
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, "Dr. Test User")
+        self.assertContains(r, "Dr. Jane Mwangi")
 
     def test_admin_add_user_form_has_role(self):
         superuser = User.objects.create_superuser(
@@ -74,8 +81,8 @@ class DocumentDossierTests(TestCase):
 
         today = timezone.now().date()
         p = PractitionerProfile.objects.create(
-            license_number="KMP-DOS-1",
-            full_name="Dr. Dossier Test",
+            license_number="KMP-2024-2089",
+            full_name="Dr. Samuel Kipchoge",
             license_expiry=today + timedelta(days=100),
             indemnity_expiry=today + timedelta(days=100),
             cpd_points=50,
@@ -84,8 +91,8 @@ class DocumentDossierTests(TestCase):
             RegistryDocument.objects.create(
                 practitioner=p,
                 document_type=RegistryDocument.DocumentType.PRACTITIONER_LICENSE,
-                title=f"Doc {i}",
-                reference_number=f"REF-{i}",
+                title=f"License Doc {i+1}",
+                reference_number=f"REF-{i+1}",
             )
         groups = group_documents_by_subject(RegistryDocument.objects.filter(practitioner=p))
         self.assertEqual(len(groups), 1)
@@ -97,8 +104,8 @@ class ComplianceRefreshTests(TestCase):
     def test_refresh_only_saves_when_status_changes(self):
         today = timezone.now().date()
         p = PractitionerProfile.objects.create(
-            license_number="KMP-T-CMP",
-            full_name="Dr. CMP",
+            license_number="KMP-2024-3055",
+            full_name="Dr. Grace Achieng",
             status=LicenseStatus.ACTIVE,
             license_expiry=today + timedelta(days=10),
             indemnity_expiry=today + timedelta(days=10),
@@ -117,7 +124,7 @@ class RegulatorAccountViewTests(TestCase):
             username="reg_details",
             password="pass12345",
             role=User.Role.REGULATOR,
-            email="reg_details@test.ke",
+            email="reg_details@kmpdc.go.ke",
         )
         self.client.login(username="reg_details", password="pass12345")
         r = self.client.get(reverse("regulator_account"))
@@ -129,9 +136,9 @@ class RegulatorAccountViewTests(TestCase):
             password="pass12345",
             role=User.Role.HOSPITAL_ADMIN,
             facility=HealthcareFacility.objects.create(
-                registration_number="FAC-TEST-403",
-                name="403 Test Hospital",
-                county="Test",
+                registration_number="FAC-MBSA-2024-042",
+                name="Mombasa Hospital Limited",
+                county="Mombasa",
                 status=LicenseStatus.ACTIVE,
                 accreditation_expiry=timezone.now().date() + timedelta(days=30),
             ),
@@ -146,16 +153,16 @@ class CertificateTests(TestCase):
     def setUp(self):
         today = timezone.now().date()
         self.facility = HealthcareFacility.objects.create(
-            registration_number="FAC-CERT-001",
-            name="Cert Hospital",
+            registration_number="FAC-KSL-2024-001",
+            name="Kenyatta National Hospital",
             county="Nairobi",
             status=LicenseStatus.ACTIVE,
             accreditation_expiry=today + timedelta(days=365),
         )
         self.practitioner = PractitionerProfile.objects.create(
-            license_number="KMP-CERT-001",
-            full_name="Dr. Cert Sample",
-            specialty="GP",
+            license_number="KMP-2024-4100",
+            full_name="Dr. Peter Odanga",
+            specialty="Internal Medicine",
             status=LicenseStatus.ACTIVE,
             license_expiry=today + timedelta(days=200),
             indemnity_expiry=today + timedelta(days=200),
@@ -212,15 +219,15 @@ class DocumentWorkflowTests(TestCase):
             role=User.Role.REGULATOR,
         )
         self.facility = HealthcareFacility.objects.create(
-            registration_number="FAC-WRK-001",
-            name="Workflow Hospital",
-            county="Nakuru",
+            registration_number="FAC-EG-2024-017",
+            name="Eldoret Regional Referral Hospital",
+            county="Uasin Gishu",
             status=LicenseStatus.ACTIVE,
             accreditation_expiry=today + timedelta(days=300),
         )
         self.practitioner = PractitionerProfile.objects.create(
-            license_number="KMP-WRK-001",
-            full_name="Dr. Workflow",
+            license_number="KMP-2024-6210",
+            full_name="Dr. Faith Chepkemoi",
             status=LicenseStatus.ACTIVE,
             license_expiry=today + timedelta(days=300),
             indemnity_expiry=today + timedelta(days=300),
@@ -326,3 +333,257 @@ class DocumentWorkflowTests(TestCase):
         r = self.client.get(reverse("document_preview", args=[doc.pk]))
         self.assertEqual(r.status_code, 200)
         self.assertIn("inline", r.get("Content-Disposition", ""))
+
+
+class FacilityPaymentFlowTests(TestCase):
+    def setUp(self):
+        today = timezone.now().date()
+        self.facility = HealthcareFacility.objects.create(
+            registration_number="FAC-NBI-2024-017",
+            name="Nairobi Women's Hospital",
+            county="Nairobi",
+            status=LicenseStatus.ACTIVE,
+            accreditation_expiry=today + timedelta(days=15),
+        )
+        self.hospital_admin = User.objects.create_user(
+            username="hosp_pay",
+            password="pass12345",
+            role=User.Role.HOSPITAL_ADMIN,
+            facility=self.facility,
+        )
+        self.application_data = {
+            "facility_legal_name": self.facility.name,
+            "registration_number": self.facility.registration_number,
+            "county": self.facility.county,
+            "physical_address": f"{self.facility.name}, {self.facility.county}",
+            "postal_address": "P.O. Box 30376",
+            "telephone": "0202717070",
+            "email": "info@nwhealth.co.ke",
+            "director_name": "Dr. Michael Kamau",
+            "bed_capacity": 120,
+            "services_requested": "General Medicine, Surgery, Maternity, Paediatrics",
+            "accreditation_sought_until": today + timedelta(days=365),
+            "declaration_agreed": True,
+        }
+
+    def test_licence_renewal_requires_payment(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        url = reverse("hospital_apply_licence")
+        r = self.client.post(url, self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("facility_payment_step"))
+
+    def test_services_update_requires_payment(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        url = reverse("hospital_apply_services")
+        r = self.client.post(url, self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("facility_payment_step"))
+
+    def test_payment_step_creates_pending_payment(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        url = reverse("hospital_apply_licence")
+        r = self.client.post(url, self.application_data)
+        self.assertEqual(r.status_code, 302)
+        payment_step_url = reverse("facility_payment_step")
+        r = self.client.get(payment_step_url)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Complete payment")
+
+    def test_completed_payment_allows_application(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        url = reverse("hospital_apply_licence")
+        r = self.client.post(url, self.application_data)
+        self.assertEqual(r.status_code, 302)
+        payment = FacilityRenewalPayment.objects.first()
+        self.assertEqual(payment.status, FacilityRenewalPayment.Status.PENDING)
+        payment.status = FacilityRenewalPayment.Status.COMPLETED
+        payment.save(update_fields=["status"])
+        r = self.client.get(reverse("hospital_facility_profile"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, self.facility.name, html=True)
+
+    def test_facility_payment_step_redirects_without_pending_payment(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.get(reverse("facility_payment_step"))
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("hospital_facility_profile"))
+
+    def test_cancel_payment_marks_failed(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        payment = FacilityRenewalPayment.objects.first()
+        r = self.client.post(reverse("facility_cancel_payment", args=[payment.pk]))
+        self.assertEqual(r.status_code, 302)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, FacilityRenewalPayment.Status.FAILED)
+
+    def test_mpesa_callback_marks_completed(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        payment = FacilityRenewalPayment.objects.first()
+        payment.merchant_request_id = "test-merchant"
+        payment.checkout_request_id = "test-checkout"
+        payment.save(update_fields=["merchant_request_id", "checkout_request_id"])
+        self.assertEqual(payment.status, FacilityRenewalPayment.Status.PENDING)
+        callback_url = reverse("mpesa_callback")
+        payload = {
+            "Body": {
+                "stkCallback": {
+                    "MerchantRequestID": "test-merchant",
+                    "CheckoutRequestID": "test-checkout",
+                    "ResultCode": 0,
+                    "ResultDesc": "Success",
+                    "CallbackMetadata": {
+                        "Item": [
+                            {"Name": "MpesaReceiptNumber", "Value": "TEST123"},
+                        ]
+                    },
+                }
+            }
+        }
+        import json
+        r = self.client.post(
+            callback_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, FacilityRenewalPayment.Status.COMPLETED)
+        self.assertEqual(payment.mpesa_receipt_number, "TEST123")
+
+    def test_mpesa_callback_marks_failed(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        payment = FacilityRenewalPayment.objects.first()
+        payment.merchant_request_id = "test-merchant"
+        payment.checkout_request_id = "test-checkout"
+        payment.save(update_fields=["merchant_request_id", "checkout_request_id"])
+        callback_url = reverse("mpesa_callback")
+        payload = {
+            "Body": {
+                "stkCallback": {
+                    "MerchantRequestID": "test-merchant",
+                    "CheckoutRequestID": "test-checkout",
+                    "ResultCode": 1,
+                    "ResultDesc": "Failed",
+                }
+            }
+        }
+        import json
+        r = self.client.post(
+            callback_url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, FacilityRenewalPayment.Status.FAILED)
+
+    def test_licence_renewal_blocked_when_more_than_one_month_to_expiry(self):
+        self.facility.accreditation_expiry = timezone.now().date() + timedelta(days=60)
+        self.facility.save(update_fields=["accreditation_expiry"])
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("hospital_facility_profile"))
+        self.client.get(reverse("hospital_facility_profile"))
+        self.assertFalse(FacilityRenewalPayment.objects.exists())
+
+    def test_licence_renewal_allowed_within_one_month_to_expiry(self):
+        self.facility.accreditation_expiry = timezone.now().date() + timedelta(days=15)
+        self.facility.save(update_fields=["accreditation_expiry"])
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("facility_payment_step"))
+        self.assertEqual(FacilityRenewalPayment.objects.count(), 1)
+
+    def test_services_update_allowed_any_time(self):
+        self.facility.accreditation_expiry = timezone.now().date() + timedelta(days=365)
+        self.facility.save(update_fields=["accreditation_expiry"])
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_services"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("facility_payment_step"))
+
+    def test_duplicate_licence_renewal_payment_blocked(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(FacilityRenewalPayment.objects.count(), 1)
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("hospital_facility_profile"))
+        self.assertEqual(FacilityRenewalPayment.objects.count(), 1)
+
+    def test_duplicate_services_update_payment_blocked(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_services"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(FacilityRenewalPayment.objects.count(), 1)
+        r = self.client.post(reverse("hospital_apply_services"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("hospital_facility_profile"))
+        self.assertEqual(FacilityRenewalPayment.objects.count(), 1)
+
+    def test_pending_application_limit_blocks_new_submission(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        FacilityApplication.objects.create(
+            facility=self.facility,
+            application_type=FacilityApplication.ApplicationType.LICENCE_RENEWAL,
+            status=FacilityApplication.ApplicationStatus.PENDING,
+            facility_legal_name=self.facility.name,
+            registration_number=self.facility.registration_number,
+            county=self.facility.county,
+            physical_address=f"{self.facility.name}, {self.facility.county}",
+            postal_address="P.O. Box 123",
+            telephone="0712345678",
+            email="test@example.com",
+            director_name="Dr. Director",
+            bed_capacity=50,
+            services_requested="General Medicine, Surgery",
+            accreditation_sought_until=timezone.now().date() + timedelta(days=365),
+            declaration_agreed=True,
+            submitted_by=self.hospital_admin,
+        )
+        FacilityApplication.objects.create(
+            facility=self.facility,
+            application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
+            status=FacilityApplication.ApplicationStatus.PENDING,
+            facility_legal_name=self.facility.name,
+            registration_number=self.facility.registration_number,
+            county=self.facility.county,
+            physical_address=f"{self.facility.name}, {self.facility.county}",
+            postal_address="P.O. Box 123",
+            telephone="0712345678",
+            email="test@example.com",
+            director_name="Dr. Director",
+            bed_capacity=50,
+            services_requested="General Medicine, Surgery",
+            accreditation_sought_until=timezone.now().date() + timedelta(days=365),
+            declaration_agreed=True,
+            submitted_by=self.hospital_admin,
+        )
+        self.assertEqual(FacilityApplication.objects.filter(facility=self.facility).count(), 2)
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("hospital_facility_profile"))
+        self.assertEqual(FacilityApplication.objects.filter(facility=self.facility).count(), 2)
+
+    def test_auto_cancel_stale_pending_payments(self):
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        payment = FacilityRenewalPayment.objects.first()
+        self.assertEqual(payment.status, FacilityRenewalPayment.Status.PENDING)
+        payment.created_at = timezone.now() - timedelta(minutes=45)
+        payment.save(update_fields=["created_at"])
+        r = self.client.get(reverse("hospital_facility_profile"))
+        self.assertEqual(r.status_code, 200)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, FacilityRenewalPayment.Status.FAILED)

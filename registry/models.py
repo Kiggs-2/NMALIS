@@ -365,6 +365,13 @@ class FacilityApplication(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["facility", "application_type"],
+                condition=models.Q(status="pending"),
+                name="uniq_facility_pending_application_type",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.get_application_type_display()} — {self.facility_legal_name}"
@@ -404,6 +411,103 @@ class PractitionerRenewalApplication(models.Model):
         return f"Renewal by {self.practitioner} @ {self.submitted_at.date()}"
 
 
+class PractitionerRenewalPayment(models.Model):
+    """Tracks M-Pesa Daraja payments for practitioner licence renewal.
+
+    The workflow expects practitioners to pay the renewal fee first. Once a payment
+    is confirmed (status="completed"), the practitioner may submit their renewal
+    application.
+    """
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    practitioner = models.ForeignKey(
+        PractitionerProfile,
+        on_delete=models.CASCADE,
+        related_name="renewal_payments",
+    )
+    initiated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="initiated_payments",
+    )
+    phone_number = models.CharField(max_length=32)
+    amount = models.PositiveIntegerField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    merchant_request_id = models.CharField(max_length=128, blank=True)
+    checkout_request_id = models.CharField(max_length=128, blank=True)
+    mpesa_receipt_number = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["practitioner"],
+                condition=models.Q(status__in=["pending", "completed"]),
+                name="uniq_practitioner_active_payment",
+            ),
+        ]
+
+    def __str__(self):
+        return f"M-Pesa payment ({self.amount}) for {self.practitioner} — {self.status}"
+
+
+class FacilityRenewalPayment(models.Model):
+    """Tracks M-Pesa Daraja payments for facility licence renewal/application.
+
+    Workflow mirrors PractitionerRenewalPayment but links to HealthcareFacility.
+    """
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    class PaymentType(models.TextChoices):
+        LICENCE_RENEWAL = "licence_renewal", "Licence renewal"
+        SERVICES_UPDATE = "services_update", "Services update"
+
+    facility = models.ForeignKey(
+        HealthcareFacility,
+        on_delete=models.CASCADE,
+        related_name="renewal_payments",
+    )
+    initiated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="initiated_facility_payments",
+    )
+    phone_number = models.CharField(max_length=32)
+    amount = models.PositiveIntegerField()
+    payment_type = models.CharField(max_length=32, choices=PaymentType.choices, default=PaymentType.LICENCE_RENEWAL)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    merchant_request_id = models.CharField(max_length=128, blank=True)
+    checkout_request_id = models.CharField(max_length=128, blank=True)
+    mpesa_receipt_number = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["facility", "payment_type"],
+                condition=models.Q(status__in=["pending", "completed"]),
+                name="uniq_facility_active_payment_type",
+            ),
+        ]
+
+    def __str__(self):
+        return f"M-Pesa payment ({self.amount}) for {self.facility} — {self.status}"
+
+
 class ComplianceAlert(models.Model):
     class AlertType(models.TextChoices):
         LICENSE_EXPIRING = "license_expiring", "License expiring soon"
@@ -439,7 +543,10 @@ class ComplianceAlert(models.Model):
 
 
 def status_label(status: str) -> str:
-    return dict(LicenseStatus.choices).get(status, status.replace("_", " ").title())
+    for choice_group in (LicenseStatus, PractitionerRenewalPayment.Status, FacilityRenewalPayment.Status):
+        if status in dict(choice_group.choices):
+            return dict(choice_group.choices)[status]
+    return status.replace("_", " ").title()
 
 
 def status_badge_color(status: str) -> str:
@@ -450,5 +557,11 @@ def status_badge_color(status: str) -> str:
         LicenseStatus.REVOKED: "danger",
         LicenseStatus.EXPIRED: "secondary",
         "invalid": "danger",
+        PractitionerRenewalPayment.Status.COMPLETED: "success",
+        PractitionerRenewalPayment.Status.PENDING: "warning",
+        PractitionerRenewalPayment.Status.FAILED: "danger",
+        FacilityRenewalPayment.Status.COMPLETED: "success",
+        FacilityRenewalPayment.Status.PENDING: "warning",
+        FacilityRenewalPayment.Status.FAILED: "danger",
     }
     return mapping.get(status, "secondary")

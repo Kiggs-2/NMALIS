@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load registry_extras %}
+{% block title %}Complete payment{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>Complete payment</h1>
+    <p class="text-muted">Pay the application fee to submit your {{ payment.get_payment_type_display }}.</p>
+  </div>
+  <a href="{% url 'hospital_facility_profile' %}" class="btn btn-outline-secondary">Back to facility profile</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white">
+        <strong>Payment details</strong>
+      </div>
+      <div class="card-body small">
+        <table class="table table-sm table-borderless mb-0">
+          <tr>
+            <th class="text-muted" style="width: 40%;">Amount</th>
+            <td><strong>KES {{ payment.amount }}</strong></td>
+          </tr>
+          <tr>
+            <th class="text-muted">Type</th>
+            <td>{{ payment.get_payment_type_display }}</td>
+          </tr>
+          <tr>
+            <th class="text-muted">Facility</th>
+            <td>{{ payment.facility.name }}</td>
+          </tr>
+          <tr>
+            <th class="text-muted">Reference</th>
+            <td><code>FAC-{{ payment.facility.registration_number }}-{{ payment.pk }}</code></td>
+          </tr>
+          <tr>
+            <th class="text-muted">Status</th>
+            <td><span class="badge bg-{{ payment.status|status_color }}">{{ payment.status|status_display }}</span></td>
+          </tr>
+          {% if payment.mpesa_receipt_number %}
+          <tr>
+            <th class="text-muted">M-Pesa receipt</th>
+            <td><code>{{ payment.mpesa_receipt_number }}</code></td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th class="text-muted">Initiated</th>
+            <td>{{ payment.created_at|date:"d M Y, H:i" }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    {% if payment.status == 'completed' %}
+      <div class="alert alert-success">
+        <h2 class="h5 mb-2">Payment confirmed</h2>
+        <p class="mb-0">Your {{ payment.get_payment_type_display }} application has been submitted successfully. KMPDC will review it and notify you when processed.</p>
+      </div>
+      <a href="{% url 'hospital_facility_profile' %}" class="btn btn-primary">Back to facility profile</a>
+    {% elif payment.status == 'failed' %}
+      <div class="alert alert-danger">
+        <h2 class="h5 mb-2">Payment failed</h2>
+        <p class="mb-0">The payment could not be completed. You can retry or cancel and start again.</p>
+      </div>
+      <form method="post" action="{% url 'facility_resend_payment' payment.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-warning">Retry payment</button>
+      </form>
+      <a href="{% url 'hospital_facility_profile' %}" class="btn btn-outline-secondary ms-2">Cancel and go back</a>
+    {% else %}
+      <div class="alert alert-info">
+        <h2 class="h5 mb-2">Payment pending</h2>
+        <p class="mb-0">Complete the payment on your phone. After paying, refresh this page to see confirmation.</p>
+      </div>
+      <form method="post" class="card shadow-sm border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+          <strong>M-Pesa payment</strong>
+        </div>
+        <div class="card-body">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label small" for="phone">Phone number</label>
+            <input type="text" name="phone" id="phone" class="form-control" value="{{ payment.phone_number }}" placeholder="07XXXXXXXX" required>
+            <div class="form-text">Enter the M-Pesa registered phone number that will receive the STK push prompt.</div>
+          </div>
+          <button type="submit" class="btn btn-success w-100">Pay KES {{ payment.amount }}</button>
+        </div>
+      </form>
+      <div class="d-flex flex-wrap gap-2">
+        <form method="post" action="{% url 'facility_resend_payment' payment.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-warning">Resend prompt</button>
+        </form>
+        <form method="post" action="{% url 'facility_check_payment' payment.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-info">Check payment status</button>
+        </form>
+        <form method="post" action="{% url 'facility_cancel_payment' payment.pk %}" class="d-inline" onsubmit="return confirm('Cancel this payment? Your application will not be submitted.');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger">Cancel</button>
+        </form>
+      </div>
+      <div class="mt-3 alert alert-warning small mb-0">
+        <strong>Note:</strong> If you do not complete the payment within the timeout period, you may need to resend the prompt or check the status manually.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
