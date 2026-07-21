@@ -94,13 +94,15 @@ class Command(BaseCommand):
         for idx, p in enumerate(practitioners[1:16], start=2):
             if User.objects.filter(practitioner_profile=p).exists():
                 continue
-            User.objects.create_user(
+            u = User.objects.create_user(
                 username=f"doctor_{idx:02d}",
                 password=password,
                 role=User.Role.PRACTITIONER,
                 practitioner_profile=p,
                 email=f"doctor_{idx:02d}@demo.nmalis.ke",
             )
+            u.is_active = True
+            u.save(update_fields=["is_active"])
 
         # --- 4. AFFILIATIONS & PRACTITIONER DOCUMENTS ---
         main_facility = facilities[0]
@@ -158,65 +160,73 @@ class Command(BaseCommand):
                 doc.file.save(f"{ref}.pdf", ContentFile(demo_pdf), save=True)
 
         # --- 6. REGULATOR ACCOUNT ---
-        regulator, created = User.objects.update_or_create(
+        regulator, _ = User.objects.update_or_create(
             username="regulator",
-            defaults={"role": User.Role.REGULATOR, "email": "regulator@kmpdc.demo.ke", "is_staff": True},
+            defaults={
+                "role": User.Role.REGULATOR,
+                "email": "regulator@kmpdc.demo.ke",
+                "is_staff": True,
+                "is_active": True,
+            },
         )
-        if created:
-            regulator.set_password(password)
-            regulator.save()
+        regulator.is_staff = True
+        regulator.is_active = True
+        regulator.set_password(password)
+        regulator.save()
 
         # --- 7. HOSPITAL ADMIN ACCOUNTS ---
-        hospital_admin, created = User.objects.update_or_create(
+        hospital_admin, _ = User.objects.update_or_create(
             username="hospital_admin",
             defaults={
                 "role": User.Role.HOSPITAL_ADMIN,
                 "facility": main_facility,
                 "email": "admin@test-hospital.demo.ke",
                 "personal_physician": sample_main,
+                "is_active": True,
             },
         )
-        if created:
-            hospital_admin.set_password(password)
-            hospital_admin.save()
-        else:
-            hospital_admin.facility = main_facility
-            hospital_admin.personal_physician = sample_main
-            hospital_admin.save(update_fields=["facility", "personal_physician"])
+        hospital_admin.facility = main_facility
+        hospital_admin.personal_physician = sample_main
+        hospital_admin.is_active = True
+        hospital_admin.set_password(password)
+        hospital_admin.save()
 
         for i in range(1, 6):
-            admin, created = User.objects.update_or_create(
+            admin, _ = User.objects.update_or_create(
                 username=f"hospital_admin_{i}",
                 defaults={
                     "role": User.Role.HOSPITAL_ADMIN,
                     "facility": facilities[i],
                     "email": f"hospital_admin_{i}@demo.nmalis.ke",
                     "personal_physician": practitioners[i * 3],
+                    "is_active": True,
                 },
             )
-            if created:
-                admin.set_password(password)
-                admin.save()
+            admin.facility = facilities[i]
+            admin.personal_physician = practitioners[i * 3]
+            admin.is_active = True
+            admin.set_password(password)
+            admin.save()
 
         # --- 8. SAMPLE DOCTOR ACCOUNT ---
         existing_holder = User.objects.filter(practitioner_profile=sample_main).first()
         if existing_holder and existing_holder.username != "doctor_sample":
             existing_holder.practitioner_profile = None
             existing_holder.save(update_fields=["practitioner_profile"])
-        doc_sample, created = User.objects.get_or_create(
+
+        doc_sample, _ = User.objects.get_or_create(
             username="doctor_sample",
             defaults={
                 "role": User.Role.PRACTITIONER,
                 "practitioner_profile": sample_main,
                 "email": "doctor_sample@demo.nmalis.ke",
+                "is_active": True,
             },
         )
-        if created:
-            doc_sample.set_password(password)
-            doc_sample.save()
-        elif doc_sample.practitioner_profile_id != sample_main.pk:
-            doc_sample.practitioner_profile = sample_main
-            doc_sample.save(update_fields=["practitioner_profile"])
+        doc_sample.practitioner_profile = sample_main
+        doc_sample.is_active = True
+        doc_sample.set_password(password)
+        doc_sample.save()
 
         # --- 9. FACILITY APPLICATIONS ---
         for i in range(3):
@@ -241,7 +251,7 @@ class Command(BaseCommand):
             )
 
         # --- 10. SYSTEM ADMIN ACCOUNT ---
-        sysadmin, created = User.objects.update_or_create(
+        sysadmin, _ = User.objects.update_or_create(
             username="sysadmin",
             defaults={
                 "role": User.Role.SYSTEM_ADMIN,
@@ -250,11 +260,13 @@ class Command(BaseCommand):
                 "last_name": "Administrator",
                 "is_staff": True,
                 "is_superuser": True,
+                "is_active": True,
             },
         )
         sysadmin.role = User.Role.SYSTEM_ADMIN
         sysadmin.is_staff = True
         sysadmin.is_superuser = True
+        sysadmin.is_active = True
         sysadmin.set_password(password)
         sysadmin.save()
 
