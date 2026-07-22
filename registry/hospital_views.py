@@ -63,7 +63,15 @@ def hospital_apply_licence(request):
 
     today = datetime.date.today()
     expiry = facility.accreditation_expiry
-    if expiry:
+    has_rejected_renewal = (
+        expiry
+        and FacilityApplication.objects.filter(
+            facility=facility,
+            application_type=FacilityApplication.ApplicationType.LICENCE_RENEWAL,
+            status=FacilityApplication.ApplicationStatus.REJECTED,
+        ).exists()
+    )
+    if expiry and not has_rejected_renewal:
         days_to_expiry = (expiry - today).days
         if days_to_expiry > 30:
             messages.error(

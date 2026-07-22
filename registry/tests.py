@@ -503,6 +503,34 @@ class FacilityPaymentFlowTests(TestCase):
         self.assertRedirects(r, reverse("facility_payment_step"))
         self.assertEqual(FacilityRenewalPayment.objects.count(), 1)
 
+    def test_licence_renewal_allowed_after_rejected_application(self):
+        self.facility.accreditation_expiry = timezone.now().date() + timedelta(days=60)
+        self.facility.save(update_fields=["accreditation_expiry"])
+        FacilityApplication.objects.create(
+            facility=self.facility,
+            application_type=FacilityApplication.ApplicationType.LICENCE_RENEWAL,
+            status=FacilityApplication.ApplicationStatus.REJECTED,
+            submitted_by=self.hospital_admin,
+            facility_legal_name=self.facility.name,
+            registration_number=self.facility.registration_number,
+            county=self.facility.county,
+            physical_address=f"{self.facility.name}, {self.facility.county}",
+            telephone="+254700000001",
+            email="admin@test-hospital.demo.ke",
+            director_name="Dr. Sample Director",
+            bed_capacity=50,
+            services_requested=self.facility.services_offered,
+            accreditation_sought_until=self.facility.accreditation_expiry,
+            declaration_agreed=True,
+            reviewed_by=User.objects.filter(role=User.Role.REGULATOR).first(),
+            reviewed_at=timezone.now(),
+        )
+        self.client.login(username="hosp_pay", password="pass12345")
+        r = self.client.post(reverse("hospital_apply_licence"), self.application_data)
+        self.assertEqual(r.status_code, 302)
+        self.assertRedirects(r, reverse("facility_payment_step"))
+        self.assertEqual(FacilityRenewalPayment.objects.count(), 1)
+
     def test_services_update_allowed_any_time(self):
         self.facility.accreditation_expiry = timezone.now().date() + timedelta(days=365)
         self.facility.save(update_fields=["accreditation_expiry"])

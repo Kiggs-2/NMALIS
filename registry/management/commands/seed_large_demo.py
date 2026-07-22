@@ -1,12 +1,17 @@
-"""Load a large synthetic dataset for rigorous testing."""
+"""Load a large synthetic dataset efficiently for testing with dynamic ReportLab PDFs."""
 
+import io
 from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.utils import timezone
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 from registry.models import (
     FacilityApplication,
@@ -19,13 +24,56 @@ from registry.models import (
 )
 
 
+def generate_pdf_bytes(title: str, reference: str, subtitle: str = "", doc_type: str = "") -> bytes:
+    """Helper function to build a valid, viewable PDF in memory using ReportLab."""
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+
+    # Header Title
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(100, 730, title)
+
+    # Subtitle / Subject Name
+    if subtitle:
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(100, 705, f"Subject: {subtitle}")
+
+    # Metadata Block
+    p.setFont("Helvetica", 10)
+    p.drawString(100, 675, f"Reference Number: {reference}")
+    if doc_type:
+        p.drawString(100, 655, f"Document Type: {doc_type}")
+    
+    p.drawString(100, 635, f"Generated On: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Visual Separator
+    p.setLineWidth(1)
+    p.line(100, 620, 500, 620)
+
+    # Document Body / Disclaimer
+    p.setFont("Helvetica-Oblique", 10)
+    p.drawString(100, 590, "This is an official system-generated test document for database seeding.")
+    p.drawString(100, 575, "All data contained herein is synthetic and generated automatically.")
+
+    # Page Footer
+    p.setFont("Helvetica", 8)
+    p.drawString(100, 50, "National Medical Portal — System Generated Copy")
+
+    p.showPage()
+    p.save()
+
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes
+
+
 class Command(BaseCommand):
     help = "Load large demo dataset (facilities, practitioners, staff, documents, applications)"
 
+    @transaction.atomic
     def handle(self, *args, **options):
         today = timezone.now().date()
         password = "demo1234"
-        demo_pdf = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
         media_root = Path(settings.MEDIA_ROOT)
         media_root.mkdir(parents=True, exist_ok=True)
 
@@ -43,6 +91,9 @@ class Command(BaseCommand):
             "Paediatrics, Immunization, Emergency",
             "Radiology, Laboratory, Pharmacy",
         ]
+
+        # Queue tracking documents to generate files dynamically
+        documents_to_file = []
 
         # --- 1. SEED FACILITIES ---
         facilities = []
@@ -75,6 +126,7 @@ class Command(BaseCommand):
                 status = LicenseStatus.PENDING_RENEWAL
             elif i % 17 == 0:
                 status = LicenseStatus.EXPIRED
+
             p, _ = PractitionerProfile.objects.update_or_create(
                 license_number=lic,
                 defaults={
@@ -92,20 +144,20 @@ class Command(BaseCommand):
 
         # --- 3. SEED DOCTOR USERS ---
         for idx, p in enumerate(practitioners[1:16], start=2):
-            if User.objects.filter(practitioner_profile=p).exists():
-                continue
-            u = User.objects.create_user(
+            u, created = User.objects.get_or_create(
                 username=f"doctor_{idx:02d}",
-                password=password,
-                role=User.Role.PRACTITIONER,
-                practitioner_profile=p,
-                email=f"doctor_{idx:02d}@demo.nmalis.ke",
+                defaults={
+                    "role": User.Role.PRACTITIONER,
+                    "practitioner_profile": p,
+                    "email": f"doctor_{idx:02d}@demo.nmalis.ke",
+                    "is_active": True,
+                },
             )
-            u.is_active = True
-            u.save(update_fields=["is_active"])
+            if created:
+                u.set_password(password)
+                u.save()
 
         # --- 4. AFFILIATIONS & PRACTITIONER DOCUMENTS ---
-        main_facility = facilities[0]
         for i, p in enumerate(practitioners):
             fac = facilities[i % len(facilities)]
             StaffAffiliation.objects.update_or_create(
@@ -129,6 +181,7 @@ class Command(BaseCommand):
                     review = RegistryDocument.ReviewStatus.REJECTED
                 elif i % 3 != 0:
                     review = RegistryDocument.ReviewStatus.VERIFIED
+
                 doc, _ = RegistryDocument.objects.update_or_create(
                     practitioner=p,
                     document_type=doc_type,
@@ -140,7 +193,7 @@ class Command(BaseCommand):
                     },
                 )
                 if not doc.file:
-                    doc.file.save(f"{ref}.pdf", ContentFile(demo_pdf), save=True)
+                    documents_to_file.append((doc, ref, p.full_name))
 
         # --- 5. FACILITY DOCUMENTS ---
         for i, facility in enumerate(facilities):
@@ -157,7 +210,7 @@ class Command(BaseCommand):
                 },
             )
             if not doc.file:
-                doc.file.save(f"{ref}.pdf", ContentFile(demo_pdf), save=True)
+                documents_to_file.append((doc, ref, facility.name))
 
         # --- 6. REGULATOR ACCOUNT ---
         regulator, _ = User.objects.update_or_create(
@@ -169,8 +222,6 @@ class Command(BaseCommand):
                 "is_active": True,
             },
         )
-        regulator.is_staff = True
-        regulator.is_active = True
         regulator.set_password(password)
         regulator.save()
 
@@ -179,15 +230,12 @@ class Command(BaseCommand):
             username="hospital_admin",
             defaults={
                 "role": User.Role.HOSPITAL_ADMIN,
-                "facility": main_facility,
+                "facility": facilities[0],
                 "email": "admin@test-hospital.demo.ke",
                 "personal_physician": sample_main,
                 "is_active": True,
             },
         )
-        hospital_admin.facility = main_facility
-        hospital_admin.personal_physician = sample_main
-        hospital_admin.is_active = True
         hospital_admin.set_password(password)
         hospital_admin.save()
 
@@ -202,19 +250,11 @@ class Command(BaseCommand):
                     "is_active": True,
                 },
             )
-            admin.facility = facilities[i]
-            admin.personal_physician = practitioners[i * 3]
-            admin.is_active = True
             admin.set_password(password)
             admin.save()
 
         # --- 8. SAMPLE DOCTOR ACCOUNT ---
-        existing_holder = User.objects.filter(practitioner_profile=sample_main).first()
-        if existing_holder and existing_holder.username != "doctor_sample":
-            existing_holder.practitioner_profile = None
-            existing_holder.save(update_fields=["practitioner_profile"])
-
-        doc_sample, _ = User.objects.get_or_create(
+        doc_sample, _ = User.objects.update_or_create(
             username="doctor_sample",
             defaults={
                 "role": User.Role.PRACTITIONER,
@@ -223,15 +263,12 @@ class Command(BaseCommand):
                 "is_active": True,
             },
         )
-        doc_sample.practitioner_profile = sample_main
-        doc_sample.is_active = True
         doc_sample.set_password(password)
         doc_sample.save()
 
         # --- 9. FACILITY APPLICATIONS ---
-        services_update_pending = []
         for i in range(3):
-            app, _ = FacilityApplication.objects.get_or_create(
+            app, _ = FacilityApplication.objects.update_or_create(
                 facility=facilities[i + 1],
                 application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
                 status=FacilityApplication.ApplicationStatus.PENDING,
@@ -250,7 +287,6 @@ class Command(BaseCommand):
                     "declaration_agreed": True,
                 },
             )
-            services_update_pending.append(app)
             ref = f"APP-{facilities[i + 1].registration_number}-{app.pk}"
             doc, _ = RegistryDocument.objects.update_or_create(
                 facility=facilities[i + 1],
@@ -262,37 +298,65 @@ class Command(BaseCommand):
                 },
             )
             if not doc.file:
-                doc.file.save(f"{ref}.pdf", ContentFile(demo_pdf), save=True)
+                documents_to_file.append((doc, ref, facilities[i + 1].name))
 
-        approved_app = FacilityApplication.objects.create(
+        approved_app, _ = FacilityApplication.objects.update_or_create(
             facility=facilities[1],
             application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
             status=FacilityApplication.ApplicationStatus.APPROVED,
-            submitted_by=hospital_admin,
-            facility_legal_name=facilities[1].name,
-            registration_number=facilities[1].registration_number,
-            county=facilities[1].county,
-            physical_address=f"{facilities[1].name}, {facilities[1].county}",
-            telephone="+254700000001",
-            email="facility0@demo.ke",
-            director_name="Dr. Sample Director 0",
-            bed_capacity=40,
-            services_requested="General Medicine, Surgery, ICU, Dialysis, Radiology",
-            accreditation_sought_until=today + timedelta(days=365),
-            declaration_agreed=True,
-            reviewed_by=regulator,
-            reviewed_at=timezone.now(),
+            defaults={
+                "submitted_by": hospital_admin,
+                "facility_legal_name": facilities[1].name,
+                "registration_number": facilities[1].registration_number,
+                "county": facilities[1].county,
+                "physical_address": f"{facilities[1].name}, {facilities[1].county}",
+                "telephone": "+254700000001",
+                "email": "facility0@demo.ke",
+                "director_name": "Dr. Sample Director 0",
+                "bed_capacity": 40,
+                "services_requested": "General Medicine, Surgery, ICU, Dialysis, Radiology",
+                "accreditation_sought_until": today + timedelta(days=365),
+                "declaration_agreed": True,
+                "reviewed_by": regulator,
+                "reviewed_at": timezone.now(),
+            },
         )
-        RegistryDocument.objects.update_or_create(
+
+        app_doc_ref = f"APP-{approved_app.pk}"
+        app_doc, _ = RegistryDocument.objects.update_or_create(
             facility=facilities[1],
             document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
-            reference_number=f"APP-{approved_app.pk}",
+            reference_number=app_doc_ref,
             defaults={
                 "title": "Services update — approved",
-                "file": ContentFile(demo_pdf),
                 "review_status": RegistryDocument.ReviewStatus.VERIFIED,
                 "reviewed_by": regulator,
                 "reviewed_at": timezone.now(),
+            },
+        )
+        if not app_doc.file:
+            documents_to_file.append((app_doc, app_doc_ref, facilities[1].name))
+
+        rejected_renewal, _ = FacilityApplication.objects.update_or_create(
+            facility=facilities[2],
+            application_type=FacilityApplication.ApplicationType.LICENCE_RENEWAL,
+            status=FacilityApplication.ApplicationStatus.REJECTED,
+            defaults={
+                "submitted_by": hospital_admin,
+                "facility_legal_name": facilities[2].name,
+                "registration_number": facilities[2].registration_number,
+                "county": facilities[2].county,
+                "physical_address": f"{facilities[2].name}, {facilities[2].county}",
+                "telephone": "+254700000002",
+                "email": "facility1@demo.ke",
+                "director_name": "Dr. Sample Director 1",
+                "bed_capacity": 60,
+                "services_requested": facilities[2].services_offered,
+                "accreditation_sought_until": facilities[2].accreditation_expiry,
+                "declaration_agreed": True,
+                "reviewed_by": regulator,
+                "reviewed_at": timezone.now(),
+                "review_notes": "Incomplete supporting documents. Resubmit with full accreditation report.",
             },
         )
 
@@ -309,15 +373,23 @@ class Command(BaseCommand):
                 "is_active": True,
             },
         )
-        sysadmin.role = User.Role.SYSTEM_ADMIN
-        sysadmin.is_staff = True
-        sysadmin.is_superuser = True
-        sysadmin.is_active = True
         sysadmin.set_password(password)
         sysadmin.save()
 
+        # --- 11. BATCH GENERATE & ATTACH REPORTLAB PDFS ---
+        self.stdout.write("Generating ReportLab PDFs...")
+        for doc, ref, subtitle in documents_to_file:
+            pdf_bytes = generate_pdf_bytes(
+                title=doc.title,
+                reference=ref,
+                subtitle=subtitle,
+                doc_type=doc.get_document_type_display(),
+            )
+            filename = f"{ref}.pdf"
+            doc.file.save(filename, ContentFile(pdf_bytes, name=filename), save=True)
+
         # --- OUTPUT CONSOLE SUMMARY ---
-        self.stdout.write(self.style.SUCCESS("Large demo dataset loaded successfully."))
+        self.stdout.write(self.style.SUCCESS("Large demo dataset loaded successfully with valid ReportLab PDFs."))
         self.stdout.write(f"Facilities: {len(facilities)} | Practitioners: {len(practitioners)}")
         self.stdout.write("--------------------------------------------------")
         self.stdout.write(f"Default Login Password: {password}")
