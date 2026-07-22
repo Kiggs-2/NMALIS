@@ -1,7 +1,13 @@
 from django.db.models import Count, Q
 
 from .forms import DocumentReviewForm
-from .models import HealthcareFacility, PractitionerProfile, RegistryDocument
+from .models import (
+    FacilityApplication,
+    HealthcareFacility,
+    PractitionerProfile,
+    PractitionerRenewalApplication,
+    RegistryDocument,
+)
 from .services import apply_document_review_outcome
 
 
@@ -89,6 +95,11 @@ def annotate_practitioner_list(queryset):
             filter=Q(documents__review_status=RegistryDocument.ReviewStatus.PENDING),
             distinct=True,
         ),
+        pending_renewal_count=Count(
+            "renewal_applications",
+            filter=Q(renewal_applications__status=PractitionerRenewalApplication.ApplicationStatus.PENDING),
+            distinct=True,
+        ),
     )
 
 
@@ -98,6 +109,11 @@ def annotate_facility_list(queryset):
         pending_document_count=Count(
             "documents",
             filter=Q(documents__review_status=RegistryDocument.ReviewStatus.PENDING),
+            distinct=True,
+        ),
+        pending_application_count=Count(
+            "applications",
+            filter=Q(applications__status=FacilityApplication.ApplicationStatus.PENDING),
             distinct=True,
         ),
     )

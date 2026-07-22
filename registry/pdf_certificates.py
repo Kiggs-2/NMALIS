@@ -131,3 +131,46 @@ def build_facility_accreditation_pdf(facility) -> BytesIO:
     c.save()
     buffer.seek(0)
     return buffer
+
+
+def build_facility_services_update_pdf(facility, application) -> BytesIO:
+    colors, A4, mm, canvas = _reportlab()
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    issued_on = timezone.now()
+
+    _draw_header(c, colors, mm, width, height, "FACILITY SERVICES UPDATE CERTIFICATE")
+
+    y = height - 60 * mm
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica", 11)
+    c.drawString(20 * mm, y, "This certifies that the facility's registered services have been updated in the national registry.")
+    y -= 12 * mm
+
+    fields = [
+        ("Facility name", facility.name),
+        ("Registration number", facility.registration_number),
+        ("County", facility.county or "—"),
+        ("Application ref", f"APP-{application.pk}"),
+        ("Approved on", application.reviewed_at.strftime("%d %B %Y") if application.reviewed_at else "—"),
+        ("Approved services", (application.services_requested or "—")[:90]),
+    ]
+    for label, value in fields:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(20 * mm, y, f"{label}:")
+        c.setFont("Helvetica", 11)
+        c.drawString(55 * mm, y, value)
+        y -= 8 * mm
+
+    c.setStrokeColor(colors.HexColor("#2563eb"))
+    c.setLineWidth(1.5)
+    c.rect(20 * mm, 35 * mm, width - 40 * mm, 25 * mm, stroke=1, fill=0)
+    c.setFont("Helvetica-Oblique", 9)
+    c.drawString(25 * mm, 50 * mm, "Official copy confirming approved services update for regulatory compliance.")
+
+    _draw_footer(c, colors, mm, width, issued_on)
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer

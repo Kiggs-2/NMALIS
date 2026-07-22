@@ -377,17 +377,39 @@ def regulator_practitioner_detail(request, pk):
     refresh_subject_statuses(triggered_by=request.user)
     practitioner = get_object_or_404(PractitionerProfile, pk=pk)
     documents_qs = practitioner.documents.select_related("reviewed_by").order_by("document_type", "-submitted_at")
+    applications_qs = practitioner.renewal_applications.select_related("reviewed_by").order_by("-submitted_at")
 
-    # Derive the logical status from documents, expiry, and CPD
     derived_status = derive_practitioner_status(practitioner)
     dossier = build_dossier_context(documents_qs)
 
-    if request.method == "POST":
+    application_review_form = None
+    review_application = None
+    review_type = request.POST.get("review_type") if request.method == "POST" else None
+
+    if request.method == "POST" and review_type == "application":
+        app_pk = request.POST.get("application_pk")
+        review_application = get_object_or_404(applications_qs, pk=app_pk)
+        is_locked = review_application.status != PractitionerRenewalApplication.ApplicationStatus.PENDING
+        if not is_locked:
+            application_review_form = FacilityApplicationReviewForm(request.POST)
+            if application_review_form.is_valid():
+                decision = application_review_form.cleaned_data["decision"]
+                notes = application_review_form.cleaned_data.get("review_notes", "")
+                if decision == "approved":
+                    approve_practitioner_application(review_application, request.user)
+                    messages.success(request, "Practitioner renewal approved.")
+                else:
+                    reject_practitioner_application(review_application, request.user, notes)
+                    messages.warning(request, "Practitioner renewal rejected.")
+                return redirect("regulator_practitioner_detail", pk=practitioner.pk)
+        else:
+            messages.info(request, "This application has already been reviewed.")
+            return redirect("regulator_practitioner_detail", pk=practitioner.pk)
+    elif request.method == "POST":
         response, dossier_override = _handle_dossier_review(request, documents_qs)
         if response is not None:
             return response
         dossier = dossier_override
-        # Refresh derivation after document review
         derived_status = derive_practitioner_status(practitioner)
 
     logs = StatusChangeLog.objects.filter(entity_type="practitioner", entity_id=practitioner.pk)[:10]
@@ -398,6 +420,9 @@ def regulator_practitioner_detail(request, pk):
             "practitioner": practitioner,
             "derived_status": derived_status,
             "logs": logs,
+            "applications": applications_qs,
+            "application_review_form": application_review_form,
+            "review_application": review_application,
             **dossier,
         },
     )
@@ -408,12 +433,35 @@ def regulator_facility_detail(request, pk):
     refresh_subject_statuses(triggered_by=request.user)
     facility = get_object_or_404(HealthcareFacility, pk=pk)
     documents_qs = facility.documents.select_related("reviewed_by").order_by("document_type", "-submitted_at")
+    applications_qs = facility.applications.select_related("submitted_by", "reviewed_by").order_by("-created_at")
 
-    # Derive the logical status from documents and expiry
     derived_status = derive_facility_status(facility)
     dossier = build_dossier_context(documents_qs)
 
-    if request.method == "POST":
+    application_review_form = None
+    review_application = None
+    review_type = request.POST.get("review_type") if request.method == "POST" else None
+
+    if request.method == "POST" and review_type == "application":
+        app_pk = request.POST.get("application_pk")
+        review_application = get_object_or_404(applications_qs, pk=app_pk)
+        is_locked = review_application.status != FacilityApplication.ApplicationStatus.PENDING
+        if not is_locked:
+            application_review_form = FacilityApplicationReviewForm(request.POST)
+            if application_review_form.is_valid():
+                decision = application_review_form.cleaned_data["decision"]
+                notes = application_review_form.cleaned_data.get("review_notes", "")
+                if decision == "approved":
+                    approve_facility_application(review_application, request.user)
+                    messages.success(request, "Facility application approved.")
+                else:
+                    reject_facility_application(review_application, request.user, notes)
+                    messages.warning(request, "Facility application rejected.")
+                return redirect("regulator_facility_detail", pk=facility.pk)
+        else:
+            messages.info(request, "This application has already been reviewed.")
+            return redirect("regulator_facility_detail", pk=facility.pk)
+    elif request.method == "POST":
         response, dossier_override = _handle_dossier_review(request, documents_qs)
         if response is not None:
             return response
@@ -422,6 +470,10 @@ def regulator_facility_detail(request, pk):
 
     staff = StaffAffiliation.objects.filter(facility=facility, is_active=True).select_related("practitioner")
     logs = StatusChangeLog.objects.filter(entity_type="facility", entity_id=facility.pk)[:10]
+    approved_services_update = facility.applications.filter(
+        application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
+        status=FacilityApplication.ApplicationStatus.APPROVED,
+    ).order_by("-reviewed_at").first()
     return render(
         request,
         "registry/regulator_facility_detail.html",
@@ -430,6 +482,10 @@ def regulator_facility_detail(request, pk):
             "staff": staff,
             "derived_status": derived_status,
             "logs": logs,
+            "applications": applications_qs,
+            "application_review_form": application_review_form,
+            "review_application": review_application,
+            "approved_services_update": approved_services_update,
             **dossier,
         },
     )
@@ -463,94 +519,6 @@ def compliance_analytics(request):
             "practitioner_rows": practitioner_rows,
             "facility_rows": facility_rows,
         },
-    )
-
-
-@role_required(User.Role.REGULATOR)
-def regulator_applications(request):
-    status_filter = request.GET.get("status", FacilityApplication.ApplicationStatus.PENDING)
-    qs = FacilityApplication.objects.select_related("facility", "submitted_by").order_by("-created_at")
-    if status_filter:
-        qs = qs.filter(status=status_filter)
-    return render(
-        request,
-        "registry/regulator_applications.html",
-        {
-            "applications": qs[:100],
-            "status_filter": status_filter,
-            "status_choices": FacilityApplication.ApplicationStatus.choices,
-        },
-    )
-
-
-@role_required(User.Role.REGULATOR)
-def regulator_application_review(request, pk):
-    application = get_object_or_404(
-        FacilityApplication.objects.select_related("facility", "submitted_by"),
-        pk=pk,
-    )
-    is_locked = application.status != FacilityApplication.ApplicationStatus.PENDING
-    form = None if is_locked else FacilityApplicationReviewForm(request.POST if request.method == "POST" else None)
-    if not is_locked and request.method == "POST" and form.is_valid():
-        decision = form.cleaned_data["decision"]
-        notes = form.cleaned_data.get("review_notes", "")
-        if decision == "approved":
-            approve_facility_application(application, request.user)
-            messages.success(request, "Application approved. Facility records updated.")
-        else:
-            reject_facility_application(application, request.user, notes)
-            messages.warning(request, "Application rejected.")
-        return redirect("regulator_applications")
-
-    return render(
-        request,
-        "registry/regulator_application_review.html",
-        {"application": application, "form": form, "is_locked": is_locked},
-    )
-
-
-@role_required(User.Role.REGULATOR)
-def regulator_practitioner_applications(request):
-    status_filter = request.GET.get("status", PractitionerRenewalApplication.ApplicationStatus.PENDING)
-    qs = PractitionerRenewalApplication.objects.select_related("practitioner", "reviewed_by").order_by("-submitted_at")
-    if status_filter:
-        qs = qs.filter(status=status_filter)
-    return render(
-        request,
-        "registry/regulator_practitioner_applications.html",
-        {
-            "applications": qs[:100],
-            "status_filter": status_filter,
-            "status_choices": PractitionerRenewalApplication.ApplicationStatus.choices,
-        },
-    )
-
-
-@role_required(User.Role.REGULATOR)
-def regulator_practitioner_application_review(request, pk):
-    application = get_object_or_404(
-        PractitionerRenewalApplication.objects.select_related("practitioner", "reviewed_by"),
-        pk=pk,
-    )
-    is_locked = application.status != PractitionerRenewalApplication.ApplicationStatus.PENDING
-    form = None
-    if not is_locked:
-        form = FacilityApplicationReviewForm(request.POST if request.method == "POST" else None)
-    if not is_locked and request.method == "POST" and form.is_valid():
-        decision = form.cleaned_data["decision"]
-        notes = form.cleaned_data.get("review_notes", "")
-        if decision == "approved":
-            approve_practitioner_application(application, request.user)
-            messages.success(request, "Practitioner renewal approved. Licence expiry extended.")
-        else:
-            reject_practitioner_application(application, request.user, notes)
-            messages.warning(request, "Practitioner renewal rejected.")
-        return redirect("regulator_practitioner_applications")
-
-    return render(
-        request,
-        "registry/regulator_practitioner_application_review.html",
-        {"application": application, "form": form, "is_locked": is_locked},
     )
 
 

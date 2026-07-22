@@ -229,8 +229,9 @@ class Command(BaseCommand):
         doc_sample.save()
 
         # --- 9. FACILITY APPLICATIONS ---
+        services_update_pending = []
         for i in range(3):
-            FacilityApplication.objects.get_or_create(
+            app, _ = FacilityApplication.objects.get_or_create(
                 facility=facilities[i + 1],
                 application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
                 status=FacilityApplication.ApplicationStatus.PENDING,
@@ -249,6 +250,51 @@ class Command(BaseCommand):
                     "declaration_agreed": True,
                 },
             )
+            services_update_pending.append(app)
+            ref = f"APP-{facilities[i + 1].registration_number}-{app.pk}"
+            doc, _ = RegistryDocument.objects.update_or_create(
+                facility=facilities[i + 1],
+                document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
+                reference_number=ref,
+                defaults={
+                    "title": "Services update — supporting document",
+                    "review_status": RegistryDocument.ReviewStatus.PENDING,
+                },
+            )
+            if not doc.file:
+                doc.file.save(f"{ref}.pdf", ContentFile(demo_pdf), save=True)
+
+        approved_app = FacilityApplication.objects.create(
+            facility=facilities[1],
+            application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
+            status=FacilityApplication.ApplicationStatus.APPROVED,
+            submitted_by=hospital_admin,
+            facility_legal_name=facilities[1].name,
+            registration_number=facilities[1].registration_number,
+            county=facilities[1].county,
+            physical_address=f"{facilities[1].name}, {facilities[1].county}",
+            telephone="+254700000001",
+            email="facility0@demo.ke",
+            director_name="Dr. Sample Director 0",
+            bed_capacity=40,
+            services_requested="General Medicine, Surgery, ICU, Dialysis, Radiology",
+            accreditation_sought_until=today + timedelta(days=365),
+            declaration_agreed=True,
+            reviewed_by=regulator,
+            reviewed_at=timezone.now(),
+        )
+        RegistryDocument.objects.update_or_create(
+            facility=facilities[1],
+            document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
+            reference_number=f"APP-{approved_app.pk}",
+            defaults={
+                "title": "Services update — approved",
+                "file": ContentFile(demo_pdf),
+                "review_status": RegistryDocument.ReviewStatus.VERIFIED,
+                "reviewed_by": regulator,
+                "reviewed_at": timezone.now(),
+            },
+        )
 
         # --- 10. SYSTEM ADMIN ACCOUNT ---
         sysadmin, _ = User.objects.update_or_create(

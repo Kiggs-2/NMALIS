@@ -67,6 +67,67 @@
   {% include "registry/_document_dossier.html" %}
 </div>
 
+{% if applications %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white"><strong>Renewal applications ({{ applications|length }})</strong></div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Submitted</th><th>Employer</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for app in applications %}
+            <tr>
+              <td>{{ app.submitted_at|date:"d M Y, H:i" }}</td>
+              <td>{{ app.current_employer|default:"—" }}</td>
+              <td><span class="badge bg-{{ app.status_color }}">{{ app.get_status_display }}</span></td>
+              <td class="text-end">
+                {% if app.status == 'pending' %}
+                  <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#app-review-{{ app.pk }}" aria-expanded="false">Review</button>
+                {% else %}
+                  <span class="small text-muted">Reviewed</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% if app.status == 'pending' %}
+            <tr class="collapse" id="app-review-{{ app.pk }}">
+              <td colspan="4">
+                <form method="post" class="row g-2 align-items-end">
+                  {% csrf_token %}
+                  <input type="hidden" name="review_type" value="application">
+                  <input type="hidden" name="application_pk" value="{{ app.pk }}">
+                  <div class="col-md-3">
+                    <label class="form-label small">Decision</label>
+                    <select name="decision" class="form-select form-select-sm" required>
+                      <option value="">Select…</option>
+                      <option value="approved">Approve</option>
+                      <option value="rejected">Reject</option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small">Review notes</label>
+                    <textarea name="review_notes" class="form-control form-control-sm" rows="1" placeholder="Optional notes"></textarea>
+                  </div>
+                  <div class="col-12">
+                    <div class="form-check">
+                      <input type="checkbox" name="accountability_acknowledged" class="form-check-input" required id="acc-app-{{ app.pk }}">
+                      <label class="form-check-label small" for="acc-app-{{ app.pk }}">I confirm that I have reviewed the supporting records and accept personal accountability for this regulatory action under KMPDC procedures.</label>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <button type="submit" class="btn btn-success btn-sm w-100">Submit application review</button>
+                  </div>
+                </form>
+              </td>
+            </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="card shadow-sm status-log-scroll">
   <div class="card-body">
     <h2 class="h5 mb-3">Status change history</h2>

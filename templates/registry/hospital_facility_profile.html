@@ -9,6 +9,9 @@
   </div>
   {% if can_download %}
     <a href="{% url 'download_facility_certificate' facility.pk %}" class="btn btn-primary">Download accreditation PDF</a>
+    {% if approved_services_update %}
+      <a href="{% url 'download_services_update_certificate' facility.pk %}" class="btn btn-outline-primary">Download services update certificate</a>
+    {% endif %}
   {% endif %}
 </div>
 

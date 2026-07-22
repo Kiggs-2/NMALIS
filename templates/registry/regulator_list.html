@@ -41,6 +41,9 @@
                 {% if item.pending_document_count %}
                   <span class="badge bg-warning text-dark">{{ item.pending_document_count }} pending</span>
                 {% endif %}
+                {% if item.pending_renewal_count %}
+                  <span class="badge bg-info text-dark">{{ item.pending_renewal_count }} renewal</span>
+                {% endif %}
               </td>
               <td><span class="badge bg-{{ item.status_color }}">{{ item.get_status_display }}</span></td>
               <td>{{ item.license_expiry }}</td>
@@ -54,6 +57,9 @@
                 <span class="badge bg-light text-dark border">{{ item.document_count }} file{{ item.document_count|pluralize }}</span>
                 {% if item.pending_document_count %}
                   <span class="badge bg-warning text-dark">{{ item.pending_document_count }} pending</span>
+                {% endif %}
+                {% if item.pending_application_count %}
+                  <span class="badge bg-info text-dark">{{ item.pending_application_count }} application{{ item.pending_application_count|pluralize }}</span>
                 {% endif %}
               </td>
               <td><span class="badge bg-{{ item.status_color }}">{{ item.get_status_display }}</span></td>

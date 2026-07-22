@@ -11,6 +11,9 @@
   </div>
   <div class="d-flex flex-wrap gap-2">
     <a href="{% url 'download_facility_certificate' facility.pk %}" class="btn btn-primary">Download accreditation PDF</a>
+    {% if approved_services_update %}
+      <a href="{% url 'download_services_update_certificate' facility.pk %}" class="btn btn-outline-primary">Download services update certificate</a>
+    {% endif %}
     <a href="{% url 'regulator_facilities' %}" class="btn btn-outline-secondary">Back</a>
   </div>
 </div>
@@ -60,6 +63,74 @@
 <div class="mb-4">
   {% include "registry/_document_dossier.html" %}
 </div>
+
+{% if applications %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white"><strong>Applications ({{ applications|length }})</strong></div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Type</th><th>Submitted</th><th>Document</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for app in applications %}
+            <tr>
+              <td>{{ app.get_application_type_display }}</td>
+              <td>{{ app.created_at|date:"d M Y, H:i" }}</td>
+              <td>
+                {% if app.supporting_file %}
+                  <a href="{{ app.supporting_file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">View file</a>
+                {% else %}
+                  <span class="small text-muted">None</span>
+                {% endif %}
+              </td>
+              <td><span class="badge bg-{{ app.status_color }}">{{ app.get_status_display }}</span></td>
+              <td class="text-end">
+                {% if app.status == 'pending' %}
+                  <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#app-review-{{ app.pk }}" aria-expanded="false">Review</button>
+                {% else %}
+                  <span class="small text-muted">Reviewed</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% if app.status == 'pending' %}
+              <tr class="collapse" id="app-review-{{ app.pk }}">
+                <td colspan="5">
+                  <form method="post" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <input type="hidden" name="review_type" value="application">
+                    <input type="hidden" name="application_pk" value="{{ app.pk }}">
+                    <div class="col-md-3">
+                      <label class="form-label small">Decision</label>
+                      <select name="decision" class="form-select form-select-sm" required>
+                        <option value="">Select…</option>
+                        <option value="approved">Approve</option>
+                        <option value="rejected">Reject</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label small">Review notes</label>
+                      <textarea name="review_notes" class="form-control form-control-sm" rows="1" placeholder="Optional notes"></textarea>
+                    </div>
+                    <div class="col-12">
+                      <div class="form-check">
+                        <input type="checkbox" name="accountability_acknowledged" class="form-check-input" required id="acc-app-{{ app.pk }}">
+                        <label class="form-check-label small" for="acc-app-{{ app.pk }}">I confirm that I have reviewed the supporting records and accept personal accountability for this regulatory action under KMPDC procedures.</label>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <button type="submit" class="btn btn-success btn-sm w-100">Submit application review</button>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="row g-4 mb-4">
   <div class="col-lg-6">

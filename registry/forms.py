@@ -71,6 +71,12 @@ class FacilityServicesUpdateForm(forms.ModelForm):
         return True
 
 
+ACCOUNTABILITY_STATEMENT = (
+    "I confirm that I have reviewed the supporting records and accept personal "
+    "accountability for this regulatory action under KMPDC procedures."
+)
+
+
 class FacilityApplicationReviewForm(forms.Form):
     decision = forms.ChoiceField(
         label="Decision",
@@ -81,6 +87,15 @@ class FacilityApplicationReviewForm(forms.Form):
         label="Review notes", required=False,
         widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
     )
+    accountability_acknowledged = forms.BooleanField(
+        label=ACCOUNTABILITY_STATEMENT, required=True,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+ACCOUNTABILITY_STATEMENT = (
+    "I confirm that I have reviewed the supporting records and accept personal "
+    "accountability for this regulatory action under KMPDC procedures."
+)
 
 
 class LoginForm(AuthenticationForm):
@@ -101,12 +116,6 @@ class CredibilityCheckForm(forms.Form):
             attrs={"class": "form-control", "placeholder": "e.g. KMP-2024-001 or FAC-KEN-001", "autocomplete": "off"}
         ),
     )
-
-
-ACCOUNTABILITY_STATEMENT = (
-    "I confirm that I have reviewed the supporting records and accept personal "
-    "accountability for this regulatory action under KMPDC procedures."
-)
 
 
 class DocumentReviewForm(forms.Form):

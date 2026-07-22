@@ -53,22 +53,6 @@ urlpatterns = [
     path("regulator/facilities/<int:pk>/", views.regulator_facility_detail, name="regulator_facility_detail"),
     path("regulator/account/", views.regulator_account, name="regulator_account"),
     path("regulator/analytics/", views.compliance_analytics, name="compliance_analytics"),
-    path("regulator/applications/", views.regulator_applications, name="regulator_applications"),
-    path(
-        "regulator/applications/<int:pk>/",
-        views.regulator_application_review,
-        name="regulator_application_review",
-    ),
-    path(
-        "regulator/practitioner-applications/",
-        views.regulator_practitioner_applications,
-        name="regulator_practitioner_applications",
-    ),
-    path(
-        "regulator/practitioner-applications/<int:pk>/",
-        views.regulator_practitioner_application_review,
-        name="regulator_practitioner_application_review",
-    ),
     path("regulator/audit/", views.audit_trail, name="audit_trail"),
     path(
         "certificates/practitioner/<int:pk>/download/",
@@ -79,6 +63,11 @@ urlpatterns = [
         "certificates/facility/<int:pk>/download/",
         certificate_views.download_facility_certificate,
         name="download_facility_certificate",
+    ),
+    path(
+        "certificates/facility/<int:pk>/services-update/download/",
+        certificate_views.download_services_update_certificate,
+        name="download_services_update_certificate",
     ),
     path("practitioner/my-licence/", certificate_views.practitioner_my_license, name="practitioner_my_license"),
     path("hospital/facility/", certificate_views.hospital_facility_profile, name="hospital_facility_profile"),

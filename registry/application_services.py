@@ -23,6 +23,20 @@ def approve_facility_application(application: FacilityApplication, regulator):
     if application.application_type == FacilityApplication.ApplicationType.SERVICES_UPDATE:
         facility.services_offered = application.services_requested.strip()
         facility.save(update_fields=["services_offered", "updated_at"])
+        doc_defaults = {
+            "title": "Services update — approved",
+            "review_status": RegistryDocument.ReviewStatus.VERIFIED,
+            "reviewed_by": regulator,
+            "reviewed_at": timezone.now(),
+        }
+        if application.supporting_file:
+            doc_defaults["file"] = application.supporting_file
+        RegistryDocument.objects.update_or_create(
+            facility=facility,
+            document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
+            reference_number=f"APP-{application.pk}",
+            defaults=doc_defaults,
+        )
     elif application.application_type == FacilityApplication.ApplicationType.LICENCE_RENEWAL:
         facility.accreditation_expiry = application.accreditation_sought_until
         facility.county = application.county
@@ -30,21 +44,20 @@ def approve_facility_application(application: FacilityApplication, regulator):
         facility.save(
             update_fields=["accreditation_expiry", "county", "name", "updated_at"]
         )
-
-    if application.supporting_file:
-        RegistryDocument.objects.update_or_create(
-            facility=facility,
-            document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
-            reference_number=f"APP-{application.pk}",
-            defaults={
-                "title": application.get_application_type_display(),
-                "file": application.supporting_file,
-                "review_status": RegistryDocument.ReviewStatus.VERIFIED,
-                "reviewed_by": regulator,
-                "reviewed_at": timezone.now(),
-                "expires_on": application.accreditation_sought_until,
-            },
-        )
+        if application.supporting_file:
+            RegistryDocument.objects.update_or_create(
+                facility=facility,
+                document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
+                reference_number=f"APP-{application.pk}",
+                defaults={
+                    "title": application.get_application_type_display(),
+                    "file": application.supporting_file,
+                    "review_status": RegistryDocument.ReviewStatus.VERIFIED,
+                    "reviewed_by": regulator,
+                    "reviewed_at": timezone.now(),
+                    "expires_on": application.accreditation_sought_until,
+                },
+            )
 
     refresh_subject_statuses(triggered_by=regulator)
     _notify_facility_admins(

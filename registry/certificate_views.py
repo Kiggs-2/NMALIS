@@ -12,7 +12,7 @@ from .certificate_services import (
 )
 from .decorators import role_required
 from .models import FacilityApplication, FacilityRenewalPayment, HealthcareFacility, PractitionerProfile, User
-from .pdf_certificates import build_facility_accreditation_pdf, build_practitioner_license_pdf
+from .pdf_certificates import build_facility_accreditation_pdf, build_facility_services_update_pdf, build_practitioner_license_pdf
 
 
 PENDING_PAYMENT_TIMEOUT_MINUTES = 30
@@ -65,6 +65,32 @@ def download_facility_certificate(request, pk):
     return pdf_response(buffer, filename)
 
 
+@role_required(User.Role.REGULATOR, User.Role.HOSPITAL_ADMIN)
+def download_services_update_certificate(request, pk):
+    facility = get_object_or_404(HealthcareFacility, pk=pk)
+    if not facility_can_download(request.user, facility):
+        raise PermissionDenied("You cannot download this certificate.")
+    application = (
+        facility.applications.filter(
+            application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
+            status=FacilityApplication.ApplicationStatus.APPROVED,
+        )
+        .select_related("reviewed_by")
+        .order_by("-reviewed_at")
+        .first()
+    )
+    if not application:
+        messages.error(request, "No approved services update application found for this facility.")
+        return redirect("hospital_facility_profile")
+    try:
+        buffer = build_facility_services_update_pdf(facility, application)
+    except ImportError as exc:
+        messages.error(request, str(exc))
+        return redirect(request.META.get("HTTP_REFERER", "dashboard"))
+    filename = f"services_update_{facility.registration_number}.pdf"
+    return pdf_response(buffer, filename)
+
+
 @role_required(User.Role.PRACTITIONER)
 def practitioner_my_license(request):
     profile = request.user.practitioner_profile
@@ -100,6 +126,10 @@ def hospital_facility_profile(request):
     pending_applications = facility.applications.filter(
         status=FacilityApplication.ApplicationStatus.PENDING
     ).count()
+    approved_services_update = facility.applications.filter(
+        application_type=FacilityApplication.ApplicationType.SERVICES_UPDATE,
+        status=FacilityApplication.ApplicationStatus.APPROVED,
+    ).order_by("-reviewed_at").first()
     renewal_window = _facility_renewal_window_status(facility)
     return render(
         request,
@@ -112,6 +142,7 @@ def hospital_facility_profile(request):
             "personal_physician": personal_physician,
             "recent_applications": recent_applications,
             "pending_applications": pending_applications,
+            "approved_services_update": approved_services_update,
             "renewal_window": renewal_window,
         },
     )
