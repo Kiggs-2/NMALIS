@@ -10,7 +10,7 @@ from .models import (
     RegistryDocument,
     User,
 )
-from .services import refresh_subject_statuses
+from .services import apply_document_review_outcome, refresh_subject_statuses
 
 
 def approve_facility_application(application: FacilityApplication, regulator):
@@ -18,46 +18,43 @@ def approve_facility_application(application: FacilityApplication, regulator):
     application.status = FacilityApplication.ApplicationStatus.APPROVED
     application.reviewed_by = regulator
     application.reviewed_at = timezone.now()
-    application.save(update_fields=["status", "reviewed_by", "reviewed_at", "updated_at"])
+    application.save(update_fields=["status", "reviewed_by", "reviewed_at"])
 
     if application.application_type == FacilityApplication.ApplicationType.SERVICES_UPDATE:
         facility.services_offered = application.services_requested.strip()
         facility.save(update_fields=["services_offered", "updated_at"])
+        doc, _ = RegistryDocument.objects.update_or_create(
+            facility=facility,
+            document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
+            reference_number=f"APP-{application.pk}",
+            defaults={
+                "title": "Services update — approved",
+                "review_status": RegistryDocument.ReviewStatus.VERIFIED,
+                "reviewed_by": regulator,
+                "reviewed_at": timezone.now(),
+            },
+        )
+        apply_document_review_outcome(doc, regulator)
+    elif application.application_type == FacilityApplication.ApplicationType.LICENCE_RENEWAL:
+        facility.county = application.county
+        facility.name = application.facility_legal_name
+        facility.save(update_fields=["county", "name", "updated_at"])
         doc_defaults = {
-            "title": "Services update — approved",
+            "title": application.get_application_type_display(),
             "review_status": RegistryDocument.ReviewStatus.VERIFIED,
             "reviewed_by": regulator,
             "reviewed_at": timezone.now(),
         }
         if application.supporting_file:
             doc_defaults["file"] = application.supporting_file
-        RegistryDocument.objects.update_or_create(
+            doc_defaults["expires_on"] = facility.accreditation_expiry
+        doc, _ = RegistryDocument.objects.update_or_create(
             facility=facility,
             document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
             reference_number=f"APP-{application.pk}",
             defaults=doc_defaults,
         )
-    elif application.application_type == FacilityApplication.ApplicationType.LICENCE_RENEWAL:
-        facility.accreditation_expiry = application.accreditation_sought_until
-        facility.county = application.county
-        facility.name = application.facility_legal_name
-        facility.save(
-            update_fields=["accreditation_expiry", "county", "name", "updated_at"]
-        )
-        if application.supporting_file:
-            RegistryDocument.objects.update_or_create(
-                facility=facility,
-                document_type=RegistryDocument.DocumentType.FACILITY_ACCREDITATION,
-                reference_number=f"APP-{application.pk}",
-                defaults={
-                    "title": application.get_application_type_display(),
-                    "file": application.supporting_file,
-                    "review_status": RegistryDocument.ReviewStatus.VERIFIED,
-                    "reviewed_by": regulator,
-                    "reviewed_at": timezone.now(),
-                    "expires_on": application.accreditation_sought_until,
-                },
-            )
+        apply_document_review_outcome(doc, regulator)
 
     refresh_subject_statuses(triggered_by=regulator)
     _notify_facility_admins(
@@ -73,7 +70,7 @@ def reject_facility_application(application: FacilityApplication, regulator, not
     application.reviewed_by = regulator
     application.reviewed_at = timezone.now()
     application.save(
-        update_fields=["status", "review_notes", "reviewed_by", "reviewed_at", "updated_at"]
+        update_fields=["status", "review_notes", "reviewed_by", "reviewed_at"]
     )
     _notify_facility_admins(
         application.facility,
@@ -97,20 +94,13 @@ def approve_practitioner_application(application: PractitionerRenewalApplication
     application.status = PractitionerRenewalApplication.ApplicationStatus.APPROVED
     application.reviewed_by = regulator
     application.reviewed_at = timezone.now()
-    application.save(update_fields=["status", "reviewed_by", "reviewed_at", "updated_at"])
-
-    profile = application.practitioner
-    today = timezone.now().date()
-    if profile.license_expiry < today:
-        profile.license_expiry = today
-    profile.license_expiry = profile.license_expiry + relativedelta(years=1)
-    profile.save(update_fields=["license_expiry", "updated_at"])
+    application.save(update_fields=["status", "reviewed_by", "reviewed_at"])
 
     refresh_subject_statuses(triggered_by=regulator)
     _notify_practitioner(
-        profile,
+        application.practitioner,
         "Practitioner licence renewal approved",
-        "Your renewal application was approved. Your licence expiry has been extended.",
+        "Your renewal application was approved. Once your supporting documents are verified, your licence and CPD will be updated automatically.",
     )
 
 
@@ -120,7 +110,7 @@ def reject_practitioner_application(application: PractitionerRenewalApplication,
     application.reviewed_by = regulator
     application.reviewed_at = timezone.now()
     application.save(
-        update_fields=["status", "review_notes", "reviewed_by", "reviewed_at", "updated_at"]
+        update_fields=["status", "review_notes", "reviewed_by", "reviewed_at"]
     )
     _notify_practitioner(
         application.practitioner,

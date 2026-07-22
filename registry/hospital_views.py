@@ -1,6 +1,7 @@
 import base64
 import datetime
 
+from dateutil.relativedelta import relativedelta
 from django.conf import settings as django_settings
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
@@ -50,6 +51,7 @@ def _create_registry_document_from_application(application, supporting_file):
         title=f"{application.get_application_type_display()} — supporting document",
         reference_number=ref,
         review_status=RegistryDocument.ReviewStatus.PENDING,
+        expires_on=application.accreditation_sought_until,
     )
     doc.file.save(supporting_file.name, supporting_file, save=True)
     return doc
@@ -71,14 +73,28 @@ def hospital_apply_licence(request):
             status=FacilityApplication.ApplicationStatus.REJECTED,
         ).exists()
     )
-    if expiry and not has_rejected_renewal:
-        days_to_expiry = (expiry - today).days
-        if days_to_expiry > 30:
+    if expiry:
+        has_active_renewal = FacilityApplication.objects.filter(
+            facility=facility,
+            application_type=FacilityApplication.ApplicationType.LICENCE_RENEWAL,
+            status__in=[
+                FacilityApplication.ApplicationStatus.PENDING,
+            ],
+        ).exists()
+        if has_active_renewal:
             messages.error(
                 request,
-                f"Licence renewal is only available within 1 month of expiry. Your facility accreditation expires on {expiry.strftime('%d %B %Y')} ({days_to_expiry} days remaining).",
+                "You already have an active licence renewal application. Please wait for regulator review or cancel your existing application before starting a new one.",
             )
             return redirect("hospital_facility_profile")
+        if not has_rejected_renewal:
+            days_to_expiry = (expiry - today).days
+            if days_to_expiry > 30:
+                messages.error(
+                    request,
+                    f"Licence renewal is only available within 1 month of expiry. Your facility accreditation expires on {expiry.strftime('%d %B %Y')} ({days_to_expiry} days remaining).",
+                )
+                return redirect("hospital_facility_profile")
 
     pending_applications_count = FacilityApplication.objects.filter(
         facility=facility,
@@ -106,7 +122,6 @@ def hospital_apply_licence(request):
         "county": facility.county,
         "physical_address": f"{facility.name}, {facility.county}",
         "services_requested": facility.services_offered,
-        "accreditation_sought_until": facility.accreditation_expiry,
         "email": request_email_placeholder(facility),
     }
 
@@ -121,15 +136,25 @@ def hospital_apply_licence(request):
 
             if existing_app:
                 app = form.save(commit=False)
-                # Transfer valid form data to the existing record
                 for field in form.cleaned_data:
-                    setattr(existing_app, field, form.cleaned_data[field])
+                    if field != "accreditation_sought_until":
+                        setattr(existing_app, field, form.cleaned_data[field])
+                existing_app.accreditation_sought_until = (
+                    facility.accreditation_expiry + relativedelta(years=1)
+                    if facility.accreditation_expiry
+                    else timezone.now().date() + relativedelta(years=1)
+                )
                 existing_app.submitted_by = request.user
                 existing_app.status = FacilityApplication.ApplicationStatus.PENDING
                 existing_app.save()
                 _create_registry_document_from_application(existing_app, form.cleaned_data.get("supporting_file"))
             else:
                 app = form.save(commit=False)
+                app.accreditation_sought_until = (
+                    facility.accreditation_expiry + relativedelta(years=1)
+                    if facility.accreditation_expiry
+                    else timezone.now().date() + relativedelta(years=1)
+                )
                 app.facility = facility
                 app.application_type = FacilityApplication.ApplicationType.LICENCE_RENEWAL
                 app.submitted_by = request.user
@@ -194,7 +219,6 @@ def hospital_apply_services(request):
         "county": facility.county,
         "physical_address": f"{facility.name}, {facility.county}",
         "services_requested": facility.services_offered,
-        "accreditation_sought_until": facility.accreditation_expiry,
         "email": request_email_placeholder(facility),
     }
 
@@ -209,15 +233,17 @@ def hospital_apply_services(request):
 
             if existing_app:
                 app = form.save(commit=False)
-                # Transfer valid form data to the existing record
                 for field in form.cleaned_data:
-                    setattr(existing_app, field, form.cleaned_data[field])
+                    if field != "accreditation_sought_until":
+                        setattr(existing_app, field, form.cleaned_data[field])
+                existing_app.accreditation_sought_until = facility.accreditation_expiry
                 existing_app.submitted_by = request.user
                 existing_app.status = FacilityApplication.ApplicationStatus.PENDING
                 existing_app.save()
                 _create_registry_document_from_application(existing_app, form.cleaned_data.get("supporting_file"))
             else:
                 app = form.save(commit=False)
+                app.accreditation_sought_until = facility.accreditation_expiry
                 app.facility = facility
                 app.application_type = FacilityApplication.ApplicationType.SERVICES_UPDATE
                 app.submitted_by = request.user

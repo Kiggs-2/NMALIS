@@ -5,22 +5,15 @@ from .models import FacilityApplication, HealthcareFacility, RegistryDocument, U
 
 KMPDC_FORM_WIDGETS = {
     "facility_legal_name": forms.TextInput(attrs={"class": "form-control"}),
-    "registration_number": forms.TextInput(attrs={"class": "form-control", "readonly": "readonly"}),
+    "registration_number": forms.TextInput(attrs={"class": "form-control"}),
     "county": forms.TextInput(attrs={"class": "form-control"}),
-    "physical_address": forms.TextInput(attrs={"class": "form-control"}),
+    "physical_address": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
     "postal_address": forms.TextInput(attrs={"class": "form-control"}),
     "telephone": forms.TextInput(attrs={"class": "form-control"}),
     "email": forms.EmailInput(attrs={"class": "form-control"}),
     "director_name": forms.TextInput(attrs={"class": "form-control"}),
-    "bed_capacity": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
-    "services_requested": forms.Textarea(
-        attrs={
-            "class": "form-control",
-            "rows": 4,
-            "placeholder": "e.g. General Medicine, Surgery, Maternity, Laboratory, Radiology",
-        }
-    ),
-    "accreditation_sought_until": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+    "bed_capacity": forms.NumberInput(attrs={"class": "form-control"}),
+    "services_requested": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
     "supporting_file": forms.FileInput(attrs={"class": "form-control"}),
     "declaration_agreed": forms.CheckboxInput(attrs={"class": "form-check-input"}),
 }
@@ -32,7 +25,7 @@ class FacilityLicenceApplicationForm(forms.ModelForm):
         fields = [
             "facility_legal_name", "registration_number", "county", "physical_address",
             "postal_address", "telephone", "email", "director_name", "bed_capacity",
-            "services_requested", "accreditation_sought_until", "supporting_file", "declaration_agreed",
+            "services_requested", "supporting_file", "declaration_agreed",
         ]
         widgets = KMPDC_FORM_WIDGETS
         labels = {
@@ -40,7 +33,6 @@ class FacilityLicenceApplicationForm(forms.ModelForm):
             "registration_number": "KMPDC facility registration number",
             "director_name": "Name of director of medical services",
             "services_requested": "Clinical services to be provided",
-            "accreditation_sought_until": "Accreditation validity sought until",
             "declaration_agreed": "I declare that the information provided is true and complete per KMPDC regulations.",
         }
 
@@ -56,7 +48,7 @@ class FacilityServicesUpdateForm(forms.ModelForm):
         fields = [
             "facility_legal_name", "registration_number", "county", "physical_address",
             "postal_address", "telephone", "email", "director_name", "bed_capacity",
-            "services_requested", "accreditation_sought_until", "supporting_file", "declaration_agreed",
+            "services_requested", "supporting_file", "declaration_agreed",
         ]
         widgets = KMPDC_FORM_WIDGETS
         labels = {

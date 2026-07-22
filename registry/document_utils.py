@@ -20,7 +20,16 @@ def review_registry_document(document: RegistryDocument, form: DocumentReviewFor
     from django.utils import timezone
 
     document.reviewed_at = timezone.now()
-    document.save(update_fields=["review_status", "review_notes", "reviewed_by", "reviewed_at"])
+    if document.review_status == RegistryDocument.ReviewStatus.VERIFIED and not document.expires_on:
+        if document.practitioner_id:
+            practitioner = document.practitioner
+            if document.document_type == RegistryDocument.DocumentType.PROFESSIONAL_INDEMNITY:
+                document.expires_on = practitioner.indemnity_expiry
+            else:
+                document.expires_on = practitioner.license_expiry
+        elif document.facility_id:
+            document.expires_on = document.facility.accreditation_expiry
+    document.save(update_fields=["review_status", "review_notes", "reviewed_by", "reviewed_at", "expires_on"])
     apply_document_review_outcome(document, user)
     return document
 

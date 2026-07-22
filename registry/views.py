@@ -359,6 +359,10 @@ def _redirect_to_document_dossier(document: RegistryDocument):
 def _handle_dossier_review(request, documents_queryset):
     document_id = request.POST.get("document_id")
     document = get_object_or_404(documents_queryset, pk=document_id)
+    is_locked = document.review_status != RegistryDocument.ReviewStatus.PENDING
+    if is_locked:
+        messages.info(request, "This document has already been reviewed and cannot be changed.")
+        return redirect(f"{request.path}#doc-{document.pk}"), build_dossier_context(documents_queryset)
     form = DocumentReviewForm(request.POST, prefix=f"doc_{document.pk}")
     if form.is_valid():
         review_registry_document(document, form, request.user)
@@ -369,6 +373,7 @@ def _handle_dossier_review(request, documents_queryset):
         if row["document"].pk == document.pk:
             row["form"] = form
             row["is_open"] = True
+            break
     return None, dossier
 
 
@@ -563,76 +568,106 @@ def practitioner_renewal(request):
         messages.error(request, "No practitioner profile linked to your account.")
         return redirect("dashboard")
 
-    # Enforce 1-month rule: cannot renew if more than 1 month remains before expiry
     today = timezone.now().date()
-    if profile.license_expiry > today and (profile.license_expiry - today).days > 31:
-        messages.warning(
+    has_rejected_renewal = PractitionerRenewalApplication.objects.filter(
+        practitioner=profile,
+        status=PractitionerRenewalApplication.ApplicationStatus.REJECTED,
+    ).exists()
+    has_active_renewal = PractitionerRenewalApplication.objects.filter(
+        practitioner=profile,
+        status__in=[
+            PractitionerRenewalApplication.ApplicationStatus.PENDING,
+        ],
+    ).exists()
+    if has_active_renewal:
+        messages.error(
             request,
-            f"Renewal is not yet available. Your licence "
-            f"({profile.license_number}) expires on "
-            f"{profile.license_expiry.strftime('%d %b %Y')} — you may apply "
-            f"for renewal only within 1 month of the expiry date.",
+            "You already have an active licence renewal application. Please wait for regulator review or reapply only if your previous application was rejected.",
         )
         return redirect("dashboard")
-
-    # Check for an existing completed payment for renewal
-    payment_completed = PractitionerRenewalPayment.objects.filter(
-        practitioner=profile, status=PractitionerRenewalPayment.Status.COMPLETED
-    ).exists()
-    pending_payment = PractitionerRenewalPayment.objects.filter(
-        practitioner=profile, status=PractitionerRenewalPayment.Status.PENDING
-    ).order_by("-created_at").first()
-
-    # Only allow submission if payment is completed
-    form = PractitionerLicenceRenewalForm(request.POST or None, request.FILES or None)
-    if request.method == "POST":
-        if not payment_completed:
-            messages.error(request, "You must complete the renewal payment before submitting the renewal application.")
-            return redirect("practitioner_renewal")
-        if form.is_valid():
-            # Save renewal application data
-            renewal_app = PractitionerRenewalApplication(
-                practitioner=profile,
-                current_employer=form.cleaned_data.get("current_employer", ""),
-                work_contact_phone=form.cleaned_data.get("work_contact_phone", ""),
-                work_email=form.cleaned_data.get("work_email", ""),
-                has_practised_continuously=form.cleaned_data.get("has_practised_continuously", ""),
-                practice_break_reason=form.cleaned_data.get("practice_break_reason", ""),
-                has_malpractice_history=form.cleaned_data.get("has_malpractice_history", ""),
-                malpractice_details=form.cleaned_data.get("malpractice_details", ""),
+    if not has_rejected_renewal:
+        if profile.license_expiry > today and (profile.license_expiry - today).days > 31:
+            messages.warning(
+                request,
+                f"Renewal is not yet available. Your licence "
+                f"({profile.license_number}) expires on "
+                f"{profile.license_expiry.strftime('%d %b %Y')} — you may apply "
+                f"for renewal only within 1 month of the expiry date.",
             )
-            renewal_app.save()
+            return redirect("dashboard")
 
-            # Save uploaded documents
-            created_docs = []
-            for field_name, doc_type in [
-                ("indemnity_file", RegistryDocument.DocumentType.PROFESSIONAL_INDEMNITY),
-                ("cpd_certificate_file", RegistryDocument.DocumentType.CPD_CERTIFICATE),
-                ("licence_renewal_file", RegistryDocument.DocumentType.PRACTITIONER_LICENSE),
-            ]:
-                uploaded = form.cleaned_data.get(field_name)
-                if uploaded:
-                    ref = f"{profile.license_number}-{field_name}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-                    doc = RegistryDocument(
-                        practitioner=profile,
-                        document_type=doc_type,
-                        title=f"{doc_type.replace('_', ' ').title()} — Renewal submission",
-                        reference_number=ref,
-                        review_status=RegistryDocument.ReviewStatus.PENDING,
-                    )
-                    doc.file.save(uploaded.name, uploaded, save=True)
-                    created_docs.append(doc)
-            if created_docs:
-                messages.success(
-                    request,
-                    f"Renewal application submitted. {len(created_docs)} document(s) uploaded for review. "
-                    "A regulator will verify them and your CPD will be updated automatically upon verification.",
+    duplicate_payment = PractitionerRenewalPayment.objects.filter(
+        practitioner=profile,
+        status__in=[
+            PractitionerRenewalPayment.Status.PENDING,
+            PractitionerRenewalPayment.Status.COMPLETED,
+        ],
+    ).exists()
+    if duplicate_payment:
+        messages.error(request, "You already have an active licence renewal payment. Complete or cancel it before starting a new one.")
+        return redirect("dashboard")
+
+    form = PractitionerLicenceRenewalForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        renewal_app = PractitionerRenewalApplication(
+            practitioner=profile,
+            current_employer=form.cleaned_data.get("current_employer", ""),
+            work_contact_phone=form.cleaned_data.get("work_contact_phone", ""),
+            work_email=form.cleaned_data.get("work_email", ""),
+            has_practised_continuously=form.cleaned_data.get("has_practised_continuously", ""),
+            practice_break_reason=form.cleaned_data.get("practice_break_reason", ""),
+            has_malpractice_history=form.cleaned_data.get("has_malpractice_history", ""),
+            malpractice_details=form.cleaned_data.get("malpractice_details", ""),
+        )
+        renewal_app.save()
+
+        created_docs = []
+        for field_name, doc_type in [
+            ("indemnity_file", RegistryDocument.DocumentType.PROFESSIONAL_INDEMNITY),
+            ("cpd_certificate_file", RegistryDocument.DocumentType.CPD_CERTIFICATE),
+            ("licence_renewal_file", RegistryDocument.DocumentType.PRACTITIONER_LICENSE),
+        ]:
+            uploaded = form.cleaned_data.get(field_name)
+            if uploaded:
+                ref = f"{profile.license_number}-{field_name}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+                expires_on = None
+                if doc_type == RegistryDocument.DocumentType.PRACTITIONER_LICENSE:
+                    expires_on = profile.license_expiry
+                elif doc_type == RegistryDocument.DocumentType.PROFESSIONAL_INDEMNITY:
+                    expires_on = profile.indemnity_expiry
+                elif doc_type == RegistryDocument.DocumentType.CPD_CERTIFICATE:
+                    expires_on = profile.license_expiry
+                doc = RegistryDocument(
+                    practitioner=profile,
+                    document_type=doc_type,
+                    title=f"{doc_type.replace('_', ' ').title()} — Renewal submission",
+                    reference_number=ref,
+                    review_status=RegistryDocument.ReviewStatus.PENDING,
+                    expires_on=expires_on,
                 )
-            else:
-                messages.warning(request, "Renewal form saved but no documents were uploaded. Please upload at least one supporting document.")
-            return redirect("practitioner_renewal")
+                doc.file.save(uploaded.name, uploaded, save=True)
+                created_docs.append(doc)
+        if created_docs:
+            messages.success(
+                request,
+                f"Renewal application submitted. {len(created_docs)} document(s) uploaded for review. "
+                "A regulator will verify them and your CPD will be updated automatically upon verification.",
+            )
+        else:
+            messages.warning(request, "Renewal form saved but no documents were uploaded. Please upload at least one supporting document.")
 
-    # Show previous renewal applications and payment info
+        amount = getattr(django_settings, "RENEWAL_FEE", 1000)
+        payment = PractitionerRenewalPayment.objects.create(
+            practitioner=profile,
+            initiated_by=request.user,
+            phone_number="",
+            amount=amount,
+            status=PractitionerRenewalPayment.Status.PENDING,
+        )
+        request.session["pending_practitioner_payment_id"] = payment.pk
+        messages.success(request, "Renewal application saved. Complete the payment to finalise submission.")
+        return redirect("practitioner_payment_step")
+
     previous_applications = PractitionerRenewalApplication.objects.filter(practitioner=profile)[:5]
     return render(
         request,
@@ -643,57 +678,49 @@ def practitioner_renewal(request):
             "today": timezone.now().date(),
             "renewal_form": form,
             "previous_applications": previous_applications,
-            "payment_completed": payment_completed,
-            "pending_payment": pending_payment,
             "renewal_fee": getattr(django_settings, "RENEWAL_FEE", 1000),
         },
     )
 
 
 @role_required(User.Role.PRACTITIONER)
-def practitioner_initiate_payment(request):
-    """Initiate M-Pesa STK Push for the practitioner's renewal fee.
+def practitioner_payment_step(request):
+    payment_id = request.session.get("pending_practitioner_payment_id") or request.GET.get("payment_id")
+    if not payment_id:
+        messages.error(request, "No pending payment found.")
+        return redirect("practitioner_renewal")
 
-    Expects POST with 'phone' field. Creates a PractitionerRenewalPayment record and
-    triggers Daraja STK push. The callback will update the payment status.
-    """
     profile = request.user.practitioner_profile
     if not profile:
         messages.error(request, "No practitioner profile linked to your account.")
         return redirect("dashboard")
-    if request.method != "POST":
-        return redirect("practitioner_renewal")
-    phone = request.POST.get("phone", "").strip()
-    if not phone:
-        messages.error(request, "Please provide a phone number to receive the payment prompt.")
-        return redirect("practitioner_renewal")
 
-    amount = getattr(django_settings, "RENEWAL_FEE", 1000)
-    payment = PractitionerRenewalPayment.objects.create(
-        practitioner=profile,
-        initiated_by=request.user,
-        phone_number=phone,
-        amount=amount,
-        status=PractitionerRenewalPayment.Status.PENDING,
-    )
+    payment = get_object_or_404(PractitionerRenewalPayment, pk=payment_id, practitioner=profile)
 
-    # Initiate STK Push
-    try:
-        callback_url = request.build_absolute_uri(reverse("mpesa_callback"))
-        account_ref = f"REN-{profile.license_number}-{payment.pk}"
-        resp = mpesa_client.stk_push(phone, amount, account_ref, transaction_desc="Licence renewal", callback_url=callback_url)
-        # Save identifiers if present
-        merchant_req = resp.get("MerchantRequestID") or resp.get("MerchantRequestID")
-        checkout_req = resp.get("CheckoutRequestID") or resp.get("CheckoutRequestID")
-        payment.merchant_request_id = merchant_req or ""
-        payment.checkout_request_id = checkout_req or ""
-        payment.save(update_fields=["merchant_request_id", "checkout_request_id"])
-        messages.info(request, "Payment prompt sent to your phone. Complete the payment on your device; you will be notified when it succeeds.")
-    except Exception as e:
-        payment.status = PractitionerRenewalPayment.Status.FAILED
-        payment.save(update_fields=["status"])
-        messages.error(request, f"Failed to initiate payment: {e}")
-    return redirect("practitioner_renewal")
+    if payment.status == PractitionerRenewalPayment.Status.COMPLETED:
+        request.session.pop("pending_practitioner_payment_id", None)
+        messages.success(request, "Payment confirmed. Your renewal application has been submitted.")
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        phone = request.POST.get("phone", "").strip()
+        if not phone:
+            messages.error(request, "Please provide a phone number to receive the payment prompt.")
+            return redirect("practitioner_payment_step")
+        try:
+            callback_url = getattr(django_settings, "MPESA_CALLBACK_URL", "") or request.build_absolute_uri(reverse("mpesa_callback"))
+            account_ref = f"REN-{profile.license_number}-{payment.pk}"
+            resp = mpesa_client.stk_push(phone, payment.amount, account_ref, transaction_desc="Licence renewal", callback_url=callback_url)
+            payment.merchant_request_id = resp.get("MerchantRequestID", "")
+            payment.checkout_request_id = resp.get("CheckoutRequestID", "")
+            payment.phone_number = phone
+            payment.save(update_fields=["merchant_request_id", "checkout_request_id", "phone_number"])
+            messages.info(request, "Payment prompt sent to your phone. Complete the payment on your device.")
+        except Exception as e:
+            messages.error(request, f"Failed to initiate payment: {e}")
+        return redirect("practitioner_payment_step")
+
+    return render(request, "registry/practitioner_payment_step.html", {"payment": payment})
 
 
 @csrf_exempt
@@ -750,10 +777,10 @@ def mpesa_callback(request):
                 receipt = item.get("Value")
         payment.status = payment.Status.COMPLETED
         payment.mpesa_receipt_number = receipt or ""
-        payment.save(update_fields=["status", "mpesa_receipt_number", "updated_at"])
+        payment.save(update_fields=["status", "mpesa_receipt_number"])
     else:
         payment.status = payment.Status.FAILED
-        payment.save(update_fields=["status", "updated_at"])
+        payment.save(update_fields=["status"])
 
     return HttpResponse(status=200)
 

@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from dateutil.relativedelta import relativedelta
 from django.conf import settings as django_settings
 from django.utils import timezone
 
@@ -248,6 +249,33 @@ def apply_document_review_outcome(document: RegistryDocument, reviewed_by):
     from .certificate_services import issue_facility_certificate, issue_practitioner_certificate
 
     refresh_subject_statuses(triggered_by=reviewed_by)
+
+    if document.review_status == RegistryDocument.ReviewStatus.VERIFIED:
+        if document.practitioner_id:
+            practitioner = document.practitioner
+            today = timezone.now().date()
+            if document.document_type == RegistryDocument.DocumentType.PRACTITIONER_LICENSE:
+                if practitioner.license_expiry < today:
+                    practitioner.license_expiry = today
+                practitioner.license_expiry = practitioner.license_expiry + relativedelta(years=1)
+                practitioner.save(update_fields=["license_expiry", "updated_at"])
+            elif document.document_type == RegistryDocument.DocumentType.PROFESSIONAL_INDEMNITY:
+                if practitioner.indemnity_expiry < today:
+                    practitioner.indemnity_expiry = today
+                practitioner.indemnity_expiry = practitioner.indemnity_expiry + relativedelta(years=1)
+                practitioner.save(update_fields=["indemnity_expiry", "updated_at"])
+            elif document.document_type == RegistryDocument.DocumentType.CPD_CERTIFICATE:
+                points = getattr(django_settings, "CPD_RENEWAL_THRESHOLD", 50)
+                practitioner.cpd_points = practitioner.cpd_points + points
+                practitioner.save(update_fields=["cpd_points", "updated_at"])
+        elif document.facility_id:
+            facility = document.facility
+            today = timezone.now().date()
+            if document.document_type == RegistryDocument.DocumentType.FACILITY_ACCREDITATION:
+                if facility.accreditation_expiry < today:
+                    facility.accreditation_expiry = today
+                facility.accreditation_expiry = facility.accreditation_expiry + relativedelta(years=1)
+                facility.save(update_fields=["accreditation_expiry", "updated_at"])
 
     if document.practitioner_id:
         practitioner = document.practitioner

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load registry_extras %}
+{% block title %}Complete renewal payment{% endblock %}
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-2">
+  <div>
+    <h1>Complete renewal payment</h1>
+    <p class="text-muted">Pay the renewal fee to submit your licence renewal application.</p>
+  </div>
+  <a href="{% url 'practitioner_renewal' %}" class="btn btn-outline-secondary">Back to renewal</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white">
+        <strong>Payment details</strong>
+      </div>
+      <div class="card-body small">
+        <table class="table table-sm table-borderless mb-0">
+          <tr>
+            <th class="text-muted" style="width: 40%;">Amount</th>
+            <td><strong>KES {{ payment.amount }}</strong></td>
+          </tr>
+          <tr>
+            <th class="text-muted">Practitioner</th>
+            <td>{{ payment.practitioner.full_name }} ({{ payment.practitioner.license_number }})</td>
+          </tr>
+          <tr>
+            <th class="text-muted">Reference</th>
+            <td><code>REN-{{ payment.practitioner.license_number }}-{{ payment.pk }}</code></td>
+          </tr>
+          <tr>
+            <th class="text-muted">Status</th>
+            <td><span class="badge bg-{{ payment.status|status_color }}">{{ payment.status|status_display }}</span></td>
+          </tr>
+          {% if payment.mpesa_receipt_number %}
+          <tr>
+            <th class="text-muted">M-Pesa receipt</th>
+            <td><code>{{ payment.mpesa_receipt_number }}</code></td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th class="text-muted">Initiated</th>
+            <td>{{ payment.created_at|date:"d M Y, H:i" }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    {% if payment.status == 'completed' %}
+      <div class="alert alert-success">
+        <h2 class="h5 mb-2">Payment confirmed</h2>
+        <p class="mb-0">Your renewal application has been submitted successfully. KMPDC will review it and notify you when processed.</p>
+      </div>
+      <a href="{% url 'practitioner_renewal' %}" class="btn btn-primary">Back to renewal</a>
+    {% elif payment.status == 'failed' %}
+      <div class="alert alert-danger">
+        <h2 class="h5 mb-2">Payment failed</h2>
+        <p class="mb-0">The payment could not be completed. You can start a new renewal application from the renewal page.</p>
+      </div>
+      <a href="{% url 'practitioner_renewal' %}" class="btn btn-warning">Start new renewal</a>
+      <a href="{% url 'practitioner_renewal' %}" class="btn btn-outline-secondary ms-2">Back to renewal</a>
+    {% else %}
+      <div class="alert alert-info">
+        <h2 class="h5 mb-2">Payment pending</h2>
+        <p class="mb-0">Complete the payment on your phone. After paying, refresh this page to see confirmation.</p>
+      </div>
+      <form method="post" class="card shadow-sm border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+          <strong>M-Pesa payment</strong>
+        </div>
+        <div class="card-body">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label small" for="phone">Phone number</label>
+            <input type="text" name="phone" id="phone" class="form-control" value="{{ payment.phone_number }}" placeholder="07XXXXXXXX" required>
+            <div class="form-text">Enter the M-Pesa registered phone number that will receive the STK push prompt.</div>
+          </div>
+          <button type="submit" class="btn btn-success w-100">Pay KES {{ payment.amount }}</button>
+        </div>
+      </form>
+      <div class="alert alert-warning small mb-0">
+        <strong>Note:</strong> If you do not complete the payment within the timeout period, you may need to start a new renewal application.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

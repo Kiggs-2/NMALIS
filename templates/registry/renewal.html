@@ -65,127 +65,97 @@
   </div>
   <div class="col-lg-7">
     {% if entity_type == 'practitioner' %}
-      {% if not payment_completed %}
-        <div class="card shadow-sm mb-3">
-          <div class="card-header bg-warning text-dark">
-            <strong>Renewal payment required</strong>
-          </div>
-          <div class="card-body">
-            <p class="small text-muted mb-2">A renewal fee of <strong>KES {{ renewal_fee }}</strong> is required before you may submit your renewal application.</p>
-
-            {% if pending_payment %}
-              <div class="alert alert-info small">
-                <strong>Payment pending</strong> — a payment prompt was sent to {{ pending_payment.phone_number }} on {{ pending_payment.created_at|date:"d M Y, H:i" }}. Once the payment completes you will be allowed to submit the renewal form.
-              </div>
-            {% else %}
-              <form method="post" action="{% url 'practitioner_initiate_payment' %}" class="row g-2 align-items-center">
-                {% csrf_token %}
-                <div class="col-auto">
-                  <label class="form-label small mb-0" for="phone">Phone</label>
-                  <input type="text" name="phone" id="phone" class="form-control form-control-sm" placeholder="07XXXXXXXX" required>
-                </div>
-                <div class="col-auto">
-                  <button type="submit" class="btn btn-success btn-sm mt-4">Pay KES {{ renewal_fee }} (M-Pesa)</button>
-                </div>
-              </form>
-            {% endif %}
-
-            <div class="mt-3 small text-muted">After payment is confirmed, refresh this page to continue with the renewal application.</div>
-          </div>
+      <!-- Practitioner renewal form with declaration AND document uploads -->
+      <form method="post" enctype="multipart/form-data" class="card shadow-sm border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+          <strong>Renewal declaration</strong>
         </div>
-      {% else %}
-        <!-- Practitioner renewal form with declaration AND document uploads -->
-        <form method="post" enctype="multipart/form-data" class="card shadow-sm border-primary mb-3">
-          <div class="card-header bg-primary text-white">
-            <strong>Renewal declaration</strong>
-          </div>
-          <div class="card-body">
-            {% csrf_token %}
-            <p class="text-muted small mb-3">
-              Provide your current practice details and confirm your fitness to practise.
-            </p>
+        <div class="card-body">
+          {% csrf_token %}
+          <p class="text-muted small mb-3">
+            Provide your current practice details and confirm your fitness to practise.
+          </p>
 
-            <!-- Practice details section -->
-            <fieldset class="border rounded p-3 mb-3 bg-light">
-              <legend class="h6 small fw-semibold px-2 w-auto">Practice details</legend>
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label small" for="{{ renewal_form.current_employer.id_for_label }}">{{ renewal_form.current_employer.label }}</label>
-                  {{ renewal_form.current_employer }}
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small" for="{{ renewal_form.work_contact_phone.id_for_label }}">{{ renewal_form.work_contact_phone.label }}</label>
-                  {{ renewal_form.work_contact_phone }}
-                </div>
-                <div class="col-12">
-                  <label class="form-label small" for="{{ renewal_form.work_email.id_for_label }}">{{ renewal_form.work_email.label }}</label>
-                  {{ renewal_form.work_email }}
-                </div>
+          <!-- Practice details section -->
+          <fieldset class="border rounded p-3 mb-3 bg-light">
+            <legend class="h6 small fw-semibold px-2 w-auto">Practice details</legend>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small" for="{{ renewal_form.current_employer.id_for_label }}">{{ renewal_form.current_employer.label }}</label>
+                {{ renewal_form.current_employer }}
               </div>
-            </fieldset>
-
-            <!-- Practice history section -->
-            <fieldset class="border rounded p-3 mb-3 bg-light">
-              <legend class="h6 small fw-semibold px-2 w-auto">Practice history</legend>
-              <div class="mb-3">
-                <label class="form-label small" for="{{ renewal_form.has_practised_continuously.id_for_label }}">{{ renewal_form.has_practised_continuously.label }}</label>
-                {{ renewal_form.has_practised_continuously }}
-                {% if renewal_form.has_practised_continuously.errors %}<div class="text-danger small">{{ renewal_form.has_practised_continuously.errors }}</div>{% endif %}
+              <div class="col-md-6">
+                <label class="form-label small" for="{{ renewal_form.work_contact_phone.id_for_label }}">{{ renewal_form.work_contact_phone.label }}</label>
+                {{ renewal_form.work_contact_phone }}
               </div>
-              <div class="mb-3">
-                <label class="form-label small" for="{{ renewal_form.practice_break_reason.id_for_label }}">{{ renewal_form.practice_break_reason.label }}</label>
-                {{ renewal_form.practice_break_reason }}
+              <div class="col-12">
+                <label class="form-label small" for="{{ renewal_form.work_email.id_for_label }}">{{ renewal_form.work_email.label }}</label>
+                {{ renewal_form.work_email }}
               </div>
-            </fieldset>
-
-            <!-- Malpractice declaration section -->
-            <fieldset class="border rounded p-3 mb-3 bg-light">
-              <legend class="h6 small fw-semibold px-2 w-auto">Professional standing</legend>
-              <div class="mb-3">
-                <label class="form-label small" for="{{ renewal_form.has_malpractice_history.id_for_label }}">{{ renewal_form.has_malpractice_history.label }}</label>
-                {{ renewal_form.has_malpractice_history }}
-                {% if renewal_form.has_malpractice_history.errors %}<div class="text-danger small">{{ renewal_form.has_malpractice_history.errors }}</div>{% endif %}
-              </div>
-              <div class="mb-3">
-                <label class="form-label small" for="{{ renewal_form.malpractice_details.id_for_label }}">{{ renewal_form.malpractice_details.label }}</label>
-                {{ renewal_form.malpractice_details }}
-              </div>
-            </fieldset>
-
-            <!-- Document uploads section -->
-            <fieldset class="border rounded p-3 mb-3 bg-light">
-              <legend class="h6 small fw-semibold px-2 w-auto">Supporting documents</legend>
-              <p class="small text-muted mb-2">Upload at least one document. Accepted: PDF, JPG, PNG.</p>
-              <div class="mb-3">
-                <label class="form-label small" for="{{ renewal_form.indemnity_file.id_for_label }}">{{ renewal_form.indemnity_file.label }}</label>
-                {{ renewal_form.indemnity_file }}
-              </div>
-              <div class="mb-3">
-                <label class="form-label small" for="{{ renewal_form.cpd_certificate_file.id_for_label }}">{{ renewal_form.cpd_certificate_file.label }}</label>
-                {{ renewal_form.cpd_certificate_file }}
-              </div>
-              <div class="mb-3">
-                <label class="form-label small" for="{{ renewal_form.licence_renewal_file.id_for_label }}">{{ renewal_form.licence_renewal_file.label }}</label>
-                {{ renewal_form.licence_renewal_file }}
-              </div>
-            </fieldset>
-
-            <!-- Declaration checkbox -->
-            <div class="form-check mb-3">
-              {{ renewal_form.declaration_agreed }}
-              <label class="form-check-label small" for="{{ renewal_form.declaration_agreed.id_for_label }}">
-                {{ renewal_form.declaration_agreed.label }}
-              </label>
-              {% if renewal_form.declaration_agreed.errors %}<div class="text-danger small">{{ renewal_form.declaration_agreed.errors }}</div>{% endif %}
             </div>
+          </fieldset>
 
-            <button type="submit" class="btn btn-primary w-100">Submit renewal application</button>
+          <!-- Practice history section -->
+          <fieldset class="border rounded p-3 mb-3 bg-light">
+            <legend class="h6 small fw-semibold px-2 w-auto">Practice history</legend>
+            <div class="mb-3">
+              <label class="form-label small" for="{{ renewal_form.has_practised_continuously.id_for_label }}">{{ renewal_form.has_practised_continuously.label }}</label>
+              {{ renewal_form.has_practised_continuously }}
+              {% if renewal_form.has_practised_continuously.errors %}<div class="text-danger small">{{ renewal_form.has_practised_continuously.errors }}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small" for="{{ renewal_form.practice_break_reason.id_for_label }}">{{ renewal_form.practice_break_reason.label }}</label>
+              {{ renewal_form.practice_break_reason }}
+            </div>
+          </fieldset>
+
+          <!-- Malpractice declaration section -->
+          <fieldset class="border rounded p-3 mb-3 bg-light">
+            <legend class="h6 small fw-semibold px-2 w-auto">Professional standing</legend>
+            <div class="mb-3">
+              <label class="form-label small" for="{{ renewal_form.has_malpractice_history.id_for_label }}">{{ renewal_form.has_malpractice_history.label }}</label>
+              {{ renewal_form.has_malpractice_history }}
+              {% if renewal_form.has_malpractice_history.errors %}<div class="text-danger small">{{ renewal_form.has_malpractice_history.errors }}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small" for="{{ renewal_form.malpractice_details.id_for_label }}">{{ renewal_form.malpractice_details.label }}</label>
+              {{ renewal_form.malpractice_details }}
+            </div>
+          </fieldset>
+
+          <!-- Document uploads section -->
+          <fieldset class="border rounded p-3 mb-3 bg-light">
+            <legend class="h6 small fw-semibold px-2 w-auto">Supporting documents</legend>
+            <p class="small text-muted mb-2">Upload at least one document. Accepted: PDF, JPG, PNG.</p>
+            <div class="mb-3">
+              <label class="form-label small" for="{{ renewal_form.indemnity_file.id_for_label }}">{{ renewal_form.indemnity_file.label }}</label>
+              {{ renewal_form.indemnity_file }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small" for="{{ renewal_form.cpd_certificate_file.id_for_label }}">{{ renewal_form.cpd_certificate_file.label }}</label>
+              {{ renewal_form.cpd_certificate_file }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small" for="{{ renewal_form.licence_renewal_file.id_for_label }}">{{ renewal_form.licence_renewal_file.label }}</label>
+              {{ renewal_form.licence_renewal_file }}
+            </div>
+          </fieldset>
+
+          <!-- Declaration checkbox -->
+          <div class="form-check mb-3">
+            {{ renewal_form.declaration_agreed }}
+            <label class="form-check-label small" for="{{ renewal_form.declaration_agreed.id_for_label }}">
+              {{ renewal_form.declaration_agreed.label }}
+            </label>
+            {% if renewal_form.declaration_agreed.errors %}<div class="text-danger small">{{ renewal_form.declaration_agreed.errors }}</div>{% endif %}
           </div>
-        </form>
-        <div class="alert alert-info small">
-          Documents uploaded will be reviewed by a KMPDC regulator. Upon verification, CPD points and licence status will update automatically.
+
+          <button type="submit" class="btn btn-primary w-100">Save and proceed to payment</button>
         </div>
-      {% endif %}
+      </form>
+      <div class="alert alert-info small">
+        Documents uploaded will be reviewed by a KMPDC regulator. Upon verification, CPD points and licence status will update automatically.
+      </div>
     {% else %}
       <!-- Facility renewal — form -->
       <form method="post" class="card shadow-sm border-primary">
